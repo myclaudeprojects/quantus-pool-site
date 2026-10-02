@@ -47,25 +47,31 @@ npm run dev
 
 **Connected share boost:** wallets with a fresh heartbeat get `CONNECTED_MULTIPLIER` (default 1.5×) on pool share weight.
 
-## Pool share economics
+## Pool share economics (mined L1 Quantus pot)
 
-Share of provisional pool rewards is based on **Arc QTC (Argus)** holdings (optional), with a boost for wallets that stay connected to the pool. Holdings never gate download. Arc QTC ≠ L1 Quantus.
+**Pool % = your cut of mined L1 Quantus** sitting in the operator pot when claims open — **not** % of Arc token supply, and **not** a fee/tax split.
+
+Buy/hold **Arc QTC (Argus)** to raise weight. Holdings never gate download. Arc QTC ≠ L1 Quantus.
 
 ### Formula
 
 1. **Eligibility:** `balance_i >= MIN_HOLD` (env, default `1`).
-2. **Base weight:** linear in token balance → `weight_i = balance_i`.
-3. **Connected boost:** if the wallet has a registered miner with a heartbeat in the last `CONNECTED_WINDOW_MINUTES` (default 15) →  
-   `weight_i = balance_i * CONNECTED_MULTIPLIER` (env, default `1.5`); else multiplier `1`.
-4. **Share:** `share_i = weight_i / Σ weight_j` over eligible holders (or `0` if total weight is 0).
-5. **Estimated rewards (provisional):**  
-   `estQtc = share_i * recent_pool_accrual_qtc`  
-   `estUsd = estQtc * qtcPriceUsd`  
-   where `qtcPriceUsd` comes from CoinGecko (`ids=quantus`), cached ~60s.
+2. **Base weight:** linear in Arc QTC balance → `weight_i = balance_i`.
+3. **Connected boost:** registered miner with heartbeat in last `CONNECTED_WINDOW_MINUTES` (default 15) →  
+   `weight_i = balance_i * CONNECTED_MULTIPLIER` (default `1.5`). Applied **once** to weight — does not mint tokens or double-count balance.
+4. **Share of mined pot:** `share_i = weight_i / Σ weight_j` over eligible holders (sums to 100% of the pot).
+5. **Payout (provisional):** `your_qtc = share_i * pool_mined_qtc`; `estUsd = your_qtc * qtcPriceUsd` (CoinGecko `quantus`).
 
-**Pre-token (`TOKEN_ADDRESS` empty):** balances are **stubs**. Registered miner wallets get `STUB_TOKEN_BALANCE` (default `1`); others `0`. Accrual falls back to `DEMO_POOL_ACCRUAL_QTC` / `pool_meta.recent_accrual_qtc`. Estimates are honest placeholders until claims + live token.
+### Launch bag vs pool %
 
-**More tokens held → greater share** (linear). Connected miners get the multiplier on top of balance.
+| Thing | Math | Meaning |
+| --- | --- | --- |
+| House buy 5M / 1B supply | **0.50%** of Arc tokens | Starting bag only |
+| Your pool share | `weight / Σ weights` | **% of mined L1 QTC pot** |
+
+Example: house 5M connected (weight 7.5M) + public 95M idle (weight 95M) → house ≈ **7.3%** of the mined pot (not 0.5%).
+
+**Pre-token (`TOKEN_ADDRESS` empty):** stub balances for registered miners (`STUB_TOKEN_BALANCE`). Accrual falls back to `DEMO_POOL_ACCRUAL_QTC` / `pool_meta.recent_accrual_qtc`.
 
 ## Env vars
 

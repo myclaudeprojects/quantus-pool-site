@@ -21,6 +21,7 @@
       <nav class="nav-links">
         <a class="hide-sm" href="#how">How it works</a>
         <a class="hide-sm" href="#share-rules">Share rules</a>
+        <a class="hide-sm" href="#pool-pct">Pool %</a>
         <a class="hide-sm" href="#rewards">Rewards</a>
         <a class="hide-sm" href="/dashboard">Dashboard</a>
         <a class="hide-sm" href="/claims">Claims</a>
@@ -128,7 +129,12 @@
       <div class="wrap">
         <div class="section-head">
           <h2>How pool shares work</h2>
-          <p><b>Buying Arc QTC on Argus only shares you into the pool</b> (proportional hold). It is not required to download or mine. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty. Arc QTC ≠ L1 Quantus.</p>
+          <p>
+            <b>Your pool % is your slice of mined L1 Quantus</b> in the operator pot —
+            not a fixed % of Arc token supply, and not a fee split.
+            Buying Arc QTC on Argus raises your weight; mining without holding is still open.
+            Arc QTC ≠ L1 Quantus.
+          </p>
         </div>
         <div class="steps">
           <article class="step">
@@ -136,28 +142,63 @@
             <p>Download is <b>open</b>. Run the miner and register a wallet anytime. Token hold is optional and never gates the package.</p>
           </article>
           <article class="step">
-            <h3>2. Buy / hold → pool share %</h3>
-            <p>Hold ≥ <code>MIN_HOLD</code> Arc QTC (Argus) to be eligible. Weight is <b>linear in balance</b>: more tokens → larger share of provisional pool rewards.</p>
+            <h3>2. Hold Arc QTC → weight</h3>
+            <p>Hold ≥ <code>MIN_HOLD</code> Arc QTC to be eligible. Weight is <b>linear in balance</b>: more tokens → larger claim on the mined pot.</p>
           </article>
           <article class="step">
-            <h3>3. Connect for a boost</h3>
-            <p>Keep a recent heartbeat (“connected”). Your weight is multiplied by <code>CONNECTED_MULTIPLIER</code> (default <b>1.5×</b>) on top of holdings.</p>
+            <h3>3. Connect for 1.5× weight</h3>
+            <p>Fresh heartbeat (“connected”) multiplies weight by <code>CONNECTED_MULTIPLIER</code> (default <b>1.5×</b>). Boosts weight once — does <b>not</b> mint tokens or double-count your balance.</p>
           </article>
         </div>
         <article class="card" style="margin-top:1.25rem">
-          <h3 style="margin-bottom:0.5rem">Formula</h3>
+          <h3 style="margin-bottom:0.5rem">Mined-pot formula</h3>
           <p class="mono" style="font-size:0.9rem;color:var(--muted);line-height:1.7">
-            weight<sub>i</sub> = balance<sub>i</sub> × (connected ? CONNECTED_MULTIPLIER : 1)<br/>
-            share<sub>i</sub> = weight<sub>i</sub> / Σ weights<br/>
-            estQtc = share<sub>i</sub> × recent_accrual_qtc &nbsp;·&nbsp; estUsd = estQtc × QTC_USD
+            weight<sub>i</sub> = balance<sub>i</sub> × (connected ? 1.5 : 1)<br/>
+            pool_share<sub>i</sub> = weight<sub>i</sub> / Σ weights &nbsp;← <b>% of mined L1 QTC pot</b><br/>
+            your_qtc = pool_share<sub>i</sub> × pool_mined_qtc
           </p>
           <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">
-            Estimates are <b>provisional</b> (demo/stub accrual × live CoinGecko price for id <code>quantus</code>) until claims open.
-            Check your wallet on the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a>.
-            Price:
-            <a href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener" style="color:var(--orange-bright)">coingecko.com/en/coins/quantus</a>.
+            Eligible holders’ shares always sum to <b>100% of the pot being distributed</b>.
+            Estimates are <b>provisional</b> until claims open.
+            Check the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a>.
           </p>
         </article>
+      </div>
+    </section>
+
+    <section id="pool-pct">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Pool % at a glance</h2>
+          <p>Two different percentages — don’t mix them.</p>
+        </div>
+        <div class="grid-2">
+          <article class="card">
+            <h3 style="margin-bottom:0.5rem">1. Arc token bag (supply)</h3>
+            <p style="color:var(--muted);font-size:0.95rem;line-height:1.65">
+              Portal 8 default supply: <b>1,000,000,000</b> Arc QTC (entire supply into the curve/pool).<br/>
+              Planned house buy at launch: <b>5,000,000</b> =
+              <b id="house-buy-pct">0.50%</b> of total supply
+              (<span class="mono" style="font-size:0.85rem">5M ÷ 1B</span>).<br/>
+              That is ownership of the Arc token only — <b>not</b> “0.5% of all mined QTC forever.”
+            </p>
+            <p class="mono" id="launch-econ-line" style="margin-top:0.75rem;font-size:0.85rem;color:var(--muted)">Loading launch bag…</p>
+          </article>
+          <article class="card">
+            <h3 style="margin-bottom:0.5rem">2. Share of mined L1 Quantus</h3>
+            <p style="color:var(--muted);font-size:0.95rem;line-height:1.65">
+              When claims open, each eligible wallet gets:<br/>
+              <span class="mono">weight = holdings × (1.5 if connected else 1)</span><br/>
+              <span class="mono">pool_share = weight / Σ weights → % of mined L1 QTC pot</span><br/><br/>
+              <b>Honest example (hold 10% of Arc supply):</b><br/>
+              • Everyone ×1 → <b>10%</b> of the mined pot.<br/>
+              • You connected 1.5×, others ×1 → weight 15 / (15+90) ≈ <b>14.29%</b> of the pot
+              (not a flat “15%” — denominator grows with your boost).<br/><br/>
+              Launch bag check: house 5M connected vs 95M idle others ≈ <b>7.3%</b> of the pot
+              (5M is only <b>0.5%</b> of 1B supply).
+            </p>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -308,6 +349,20 @@
           document.getElementById('stat-claims-note').textContent = s.claimsOpen
             ? 'CLAIMS_OPEN=true'
             : 'CLAIMS_OPEN=false · post-launch · height=' + Number(height || 0).toLocaleString();
+
+          const le = s.launchEconomics || {};
+          const pct = Number(le.houseBuyPctOfSupply);
+          const pctEl = document.getElementById('house-buy-pct');
+          if (pctEl && Number.isFinite(pct)) pctEl.textContent = pct.toFixed(2) + '%';
+          const line = document.getElementById('launch-econ-line');
+          if (line) {
+            const supply = Number(le.totalSupply || 1e9).toLocaleString();
+            const buy = Number(le.houseBuyTokens || 5e6).toLocaleString();
+            const mult = Number(s.connectedMultiplier || 1.5);
+            line.textContent =
+              'Bag: ' + buy + ' / ' + supply + ' supply · pool share = holdings × ' +
+              mult + '× if connected ÷ Σ weights · % of mined L1 QTC pot';
+          }
         } catch (e) {
           document.getElementById('stat-claims-note').textContent = 'Could not load pool stats';
         }

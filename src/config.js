@@ -103,6 +103,16 @@ const config = {
   ).trim(),
   /** How often to refresh seed heartbeat (ms). Keep well under CONNECTED_WINDOW. */
   seedOperatorTouchMs: Number(process.env.SEED_OPERATOR_TOUCH_MS || 60000),
+
+  /**
+   * Display-only Arc launch bag (Portal 8 defaults). Does not mint or trade.
+   * Pool share % of mined L1 QTC = f(holdings × connected multiplier), NOT these percents alone.
+   */
+  launchTotalSupply: Number(process.env.LAUNCH_TOTAL_SUPPLY || 1_000_000_000),
+  launchHouseBuyTokens: Number(process.env.LAUNCH_HOUSE_BUY_TOKENS || 5_000_000),
+  launchHouseWallet:
+    (process.env.LAUNCH_HOUSE_WALLET || '0x341BB8851Ff8fD9EAE20ea083c2F779e646B8488').trim(),
 };
+
 
 module.exports = config;
