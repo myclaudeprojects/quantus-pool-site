@@ -3,7 +3,7 @@
 const express = require('express');
 const { getDb } = require('../db');
 const config = require('../config');
-const { countConnectedMiners, getTotalMinedL1Qtc, getPoolShareFormula, illustrativeExample } = require('../services/scoring');
+const { countConnectedMiners, getTotalMinedL1Qtc, getPoolShareFormula, illustrativeExample, curveSeries } = require('../services/scoring');
 const { getQtcPriceUsd } = require('../services/price');
 const { getChainSnapshot, refreshChain } = require('../services/chain');
 const { touchOperatorSeed } = require('../services/operatorSeed');
@@ -120,12 +120,14 @@ router.get('/stats', async (req, res) => {
     totalMinedL1Qtc: totalMinedL1Qtc,
     poolShareFormula: getPoolShareFormula(),
     poolShareExample: illustrativeExample({ totalMinedL1Qtc: totalMinedL1Qtc }),
+    curveSeries: curveSeries(),
     seededOperator: Boolean(config.seedOperatorMiner),
     seedOperatorHashrate: config.seedOperatorMiner ? config.seedOperatorHashrate : null,
     seedOperatorMinerId: config.seedOperatorMiner ? config.seedOperatorMinerId : null,
-    /** Display-only: Arc token bag at launch vs how mined L1 QTC is shared. */
+    /** Display-only: Arc 1B bag + L1 21M chain-max context (not claim denominator). */
     launchEconomics: {
       totalSupply: config.launchTotalSupply,
+      l1MaxSupplyQtc: config.l1MaxSupplyQtc,
       houseBuyTokens: config.launchHouseBuyTokens,
       houseBuyPctOfSupply:
         config.launchTotalSupply > 0
@@ -133,17 +135,9 @@ router.get('/stats', async (req, res) => {
           : 0,
       houseWallet: config.launchHouseWallet,
       note:
-        'House buy is % of Arc token supply only. Your pool share % of mined L1 Quantus = weight/Σweights among eligible holders (balance × connected multiplier). Not a fixed % of supply.',
+        'Arc launch = 1B. L1 Quantus max = 21M ever (chain context only). Claim % = share of mined Quantus IN THE POOL — not % of 21M. Arc QTC ≠ L1 Quantus.',
     },
-    shareFormula: {
-      eligibility: 'balance >= MIN_HOLD',
-      weight: 'balance × (connected ? CONNECTED_MULTIPLIER : 1)',
-      shareOfMinedPot: 'weight_i / Σ weight_j',
-      payout: 'share × pool_mined_qtc (provisional until CLAIMS_OPEN)',
-      connectedMultiplier: config.connectedMultiplier,
-      connectedWindowMinutes: config.connectedWindowMinutes,
-      minHold: config.minHold,
-    },
+    shareFormula: getPoolShareFormula(),
   });
 });
 

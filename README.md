@@ -47,31 +47,43 @@ npm run dev
 
 **Connected share boost:** wallets with a fresh heartbeat get `CONNECTED_MULTIPLIER` (default 1.5×) on pool share weight.
 
-## Pool share economics (mined L1 Quantus pot)
+## Pool share economics (pool mining pot)
 
-**Pool % = your cut of mined L1 Quantus** sitting in the operator pot when claims open — **not** % of Arc token supply, and **not** a fee/tax split.
+**No paywall** to download. **Mining required** for pool eligibility.
 
-Buy/hold **Arc QTC (Argus)** to raise weight. Holdings never gate download. Arc QTC ≠ L1 Quantus.
+**Pool % = your cut of mined L1 Quantus currently in the pool** — not % of Arc token supply, not % of the 21M L1 chain max (context only), not a fee split.
 
-### Formula
+### Locked formula
 
-1. **Eligibility:** `balance_i >= MIN_HOLD` (env, default `1`).
-2. **Base weight:** linear in Arc QTC balance → `weight_i = balance_i`.
-3. **Connected boost:** registered miner with heartbeat in last `CONNECTED_WINDOW_MINUTES` (default 15) →  
-   `weight_i = balance_i * CONNECTED_MULTIPLIER` (default `1.5`). Applied **once** to weight — does not mint tokens or double-count balance.
-4. **Share of mined pot:** `share_i = weight_i / Σ weight_j` over eligible holders (sums to 100% of the pot).
-5. **Payout (provisional):** `your_qtc = share_i * pool_mined_qtc`; `estUsd = your_qtc * qtcPriceUsd` (CoinGecko `quantus`).
+```
+if not connected (no recent heartbeat) → weight_i = 0
+if connected → weight_i = Arc_QTC_holdings_i ^ 1.5
+pool_share_i = weight_i / Σ weight_j
+claim_i = pool_share_i × mined_L1_QTC_in_pool
+```
 
-### Launch bag vs pool %
+- Convex `^1.5` advantages larger bags more than linear.
+- Extra ×1.5 connected boost **dropped** (redundant once mining is the gate).
+- Holders who don’t mine get **0%** of the mining pot.
+- Arc launch **1B** · L1 Quantus max **21M** ever (chain-max context only).
+- Arc QTC ≠ L1 Quantus coin.
 
-| Thing | Math | Meaning |
-| --- | --- | --- |
-| House buy 5M / 1B supply | **0.50%** of Arc tokens | Starting bag only |
-| Your pool share | `weight / Σ weights` | **% of mined L1 QTC pot** |
+### Example (hold 10% of Arc 1B)
 
-Example: house 5M connected (weight 7.5M) + public 95M idle (weight 95M) → house ≈ **7.3%** of the mined pot (not 0.5%).
+| Case | Pool share |
+| --- | --- |
+| You mine + others mine | convex ^1.5 ≈ **3.57%** of pot (linear would be 10%) |
+| Hold 10% but **don’t mine** | **0%** |
+| Only you mining | **100%** of pot |
 
-**Pre-token (`TOKEN_ADDRESS` empty):** stub balances for registered miners (`STUB_TOKEN_BALANCE`). Accrual falls back to `DEMO_POOL_ACCRUAL_QTC` / `pool_meta.recent_accrual_qtc`.
+### Graph
+
+Home page SVG: X = % of Arc 1B held while mining · Y = % of pool mining pot · orange = ^1.5 · dashed = linear (rejected).
+
+API: `GET /api/rewards/formula`, `GET /api/rewards/curve`.
+
+**Pre-token (`TOKEN_ADDRESS` empty):** stub balances for registered miners. Accrual falls back to `DEMO_POOL_ACCRUAL_QTC`.
+
 
 ## Env vars
 
@@ -90,7 +102,10 @@ Example: house 5M connected (weight 7.5M) + public 95M idle (weight 95M) → hou
 | `MIN_HOLD` | `1` | Min token balance for **share eligibility** (not download) |
 | `PRE_TOKEN_OPEN_DOWNLOAD` | `true` | **Deprecated** — download is always open |
 | `CLAIMS_OPEN` | `false` | Unlock `POST /api/claims/request` |
-| `CONNECTED_MULTIPLIER` | `1.5` | Weight boost for connected miners |
+| `CONNECTED_MULTIPLIER` | `1.5` | Legacy; boost not applied (mining is the gate) |
+| `SHARE_CURVE_POWER` | `1.5` | Convex holdings exponent |
+| `LAUNCH_TOTAL_SUPPLY` | `1000000000` | Arc launch supply (display) |
+| `L1_MAX_SUPPLY_QTC` | `21000000` | L1 chain-max context only |
 | `CONNECTED_WINDOW_MINUTES` | `15` | Heartbeat freshness for “connected” |
 | `STUB_TOKEN_BALANCE` | `1` | Pre-token stub balance for registered wallets |
 | `DEMO_POOL_ACCRUAL_QTC` | `10` | Demo accrual for reward estimates |

@@ -263,3 +263,31 @@ footer {
   border: none;
   box-shadow: none;
 }
+
+
+/* Share-curve graph */
+.share-curve-wrap { margin-top: 0.75rem; }
+.share-curve-legend {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  margin-top: 0.75rem; font-size: 0.88rem; color: var(--muted);
+}
+.sc-leg { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sc-leg i {
+  display: inline-block; width: 22px; height: 3px; border-radius: 2px;
+}
+.sc-convex i { background: var(--orange); }
+.sc-linear i {
+  background: repeating-linear-gradient(90deg, #78716c 0 6px, transparent 6px 11px);
+  height: 2px;
+}
+.share-curve-note {
+  margin-top: 0.65rem; color: var(--muted); font-size: 0.88rem; line-height: 1.55;
+}
+.share-curve-readout {
+  margin-top: 0.5rem; font-size: 0.85rem; color: var(--orange-bright);
+  min-height: 1.3em;
+}
+.share-curve-hit {
+  cursor: crosshair; z-index: 2;
+  background: transparent;
+}

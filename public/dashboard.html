@@ -59,14 +59,14 @@
       </article>
     </div>
 
-    <section class="card" style="margin-bottom:1.5rem" id="share-rules-dash">
-      <h3>Share of mined L1 Quantus (provisional)</h3>
+        <section class="card" style="margin-bottom:1.5rem" id="share-rules-dash">
+      <h3>Share of pool mining pot (provisional)</h3>
       <ul style="margin:0.75rem 0 0 1.1rem;color:var(--muted);line-height:1.65">
-        <li><b>Pool % = your cut of the mined L1 QTC pot</b> — not % of Arc supply, not a fee split.</li>
-        <li>Hold ≥ <code>MIN_HOLD</code> Arc QTC → eligible. Weight = balance (linear).</li>
-        <li>Connected (fresh heartbeat) → weight × <code>CONNECTED_MULTIPLIER</code> (default 1.5). Once on weight; no extra tokens.</li>
-        <li><code>your_qtc = (weight / Σ weights) × pool_mined_qtc</code> — provisional until claims.</li>
-        <li>Launch bag (display): house buy <b>5M / 1B = 0.5%</b> of Arc supply — starting holdings only; live pool % depends on who else holds + connect status.</li>
+        <li><b>No paywall</b> — download is open. <b>Mining required</b> for pool eligibility.</li>
+        <li>No recent heartbeat → <b>weight = 0</b> → 0% of the pool mining pot (even with a large Arc bag).</li>
+        <li>While mining: <code>weight = holdings<sup>1.5</sup></code> (convex). Extra ×1.5 boost dropped (redundant with gate).</li>
+        <li><code>claim = (weight / Σ weights) × mined_L1_QTC_in_pool</code> — % of <b>pool pot</b>, not % of 21M L1 max.</li>
+        <li>Arc launch <b>1B</b> · L1 max <b>21M</b> (context). Arc QTC ≠ L1 Quantus. House buy 5M/1B = 0.5% of Arc bag only.</li>
       </ul>
       <p class="mono" id="dash-launch-econ" style="margin-top:0.85rem;font-size:0.85rem;color:var(--muted)">Loading…</p>
     </section>

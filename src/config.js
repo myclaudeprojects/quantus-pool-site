@@ -55,9 +55,15 @@ const config = {
   corsOrigin: (process.env.CORS_ORIGIN || '').trim(),
   publicDir: path.join(root, 'public'),
 
-  /** Connected-miner weight boost (heartbeat within window). */
+  /**
+   * Mining gate: no recent heartbeat → weight = 0 (holders who don't mine get 0% of pot).
+   * Connected multiplier is redundant when mining is the gate (all eligible share the same ×);
+   * kept for env/API compat but scoring uses it only as a boolean gate (weight 0 or holdings^power).
+   */
   connectedMultiplier: Number(process.env.CONNECTED_MULTIPLIER || 1.5),
   connectedWindowMinutes: Number(process.env.CONNECTED_WINDOW_MINUTES || 15),
+  /** If true (default), unconnected wallets always get weight 0. */
+  miningRequiredForShare: true,
 
   /**
    * Pre-token stub balance for registered miner wallets when TOKEN_ADDRESS empty.
@@ -105,14 +111,27 @@ const config = {
   seedOperatorTouchMs: Number(process.env.SEED_OPERATOR_TOUCH_MS || 60000),
 
   /**
-   * Display-only Arc launch bag (Portal 8 defaults). Does not mint or trade.
-   * Pool share % of mined L1 QTC = f(holdings × connected multiplier), NOT these percents alone.
+   * Supply lock (display + claim framing). Does not mint.
+   * Arc launch = 1B Arc QTC. L1 Quantus hard cap = 21M ever.
+   * Buyers of Arc QTC claim into the pool's mined share of that 21M pot.
+   * Arc QTC ≠ L1 Quantus coin.
    */
   launchTotalSupply: Number(process.env.LAUNCH_TOTAL_SUPPLY || 1_000_000_000),
+  l1MaxSupplyQtc: Number(process.env.L1_MAX_SUPPLY_QTC || 21_000_000),
   launchHouseBuyTokens: Number(process.env.LAUNCH_HOUSE_BUY_TOKENS || 5_000_000),
   launchHouseWallet:
     (process.env.LAUNCH_HOUSE_WALLET || '0x341BB8851Ff8fD9EAE20ea083c2F779e646B8488').trim(),
-};
 
+  /**
+   * LOCKED share curve (convex + mining gate):
+   *   if not connected (no recent heartbeat) → weight = 0
+   *   if connected → weight = holdings ^ SHARE_CURVE_POWER  (default 1.5)
+   * Extra ×1.5 connected boost dropped as redundant (gate already requires mining).
+   * Download stays open (no paywall); mining required for pool eligibility.
+   */
+  shareCurve: (process.env.SHARE_CURVE || 'power').trim().toLowerCase(),
+  shareCurvePower: Number(process.env.SHARE_CURVE_POWER || 1.5),
+  shareCurveLocked: true,
+};
 
 module.exports = config;

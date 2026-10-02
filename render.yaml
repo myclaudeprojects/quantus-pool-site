@@ -24,6 +24,14 @@ services:
         value: "1"
       - key: CONNECTED_MULTIPLIER
         value: "1.5"
+      - key: SHARE_CURVE
+        value: power
+      - key: SHARE_CURVE_POWER
+        value: "1.5"
+      - key: LAUNCH_TOTAL_SUPPLY
+        value: "1000000000"
+      - key: L1_MAX_SUPPLY_QTC
+        value: "21000000"
       - key: LAUNCH_TOTAL_SUPPLY
         value: "1000000000"
       - key: LAUNCH_HOUSE_BUY_TOKENS
