@@ -8,6 +8,8 @@ Miners register a wallet, **download the Windows package openly (no paywall)**, 
 
 **Not a browser GPU miner.** The animated “Pool miner” panel is a status visualization only.
 
+**Source:** The public site source is available at [github.com/myclaudeprojects/quantus-pool-site](https://github.com/myclaudeprojects/quantus-pool-site).
+
 ## Paths
 
 | What | Path |
