@@ -30,8 +30,14 @@ services:
         value: "10"
       - key: COINGECKO_ID
         value: quantus
+      - key: COINGECKO_URL
+        value: https://www.coingecko.com/en/coins/quantus
       - key: PRICE_CACHE_SECONDS
         value: "60"
+      - key: QUANTUS_GRAPHQL_URL
+        value: https://sub2.quantus.com/v1/graphql
+      - key: QUANTUS_POLL_MS
+        value: "4000"
       - key: OPERATOR_WORMHOLE
         value: qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ
       - key: DOWNLOAD_SECRET

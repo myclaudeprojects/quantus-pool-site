@@ -8,10 +8,10 @@ const ERC20_ABI = [
 ];
 
 /**
- * Stub-friendly Argus token paywall.
- * - TOKEN_ADDRESS empty → tokenConfigured:false (pre-launch)
- * - With address + RPC → balances via ethers
- * - PRE_TOKEN_OPEN_DOWNLOAD bypasses download gate for testing
+ * Token balance helper for **pool share %** only.
+ * Download is open — holdings never gate the miner package.
+ * - TOKEN_ADDRESS empty → stub balances via scoring
+ * - With address + RPC → on-chain balanceOf via ethers
  */
 async function checkPaywall(address) {
   const normalized = String(address || '').trim();
@@ -19,40 +19,36 @@ async function checkPaywall(address) {
   const minHold = config.minHold;
 
   const base = {
-    allowed: false,
+    allowed: true, // download always open; field kept for API compat
     balance: 0,
     minHold,
     tokenConfigured,
-    preTokenOpenDownload: config.preTokenOpenDownload,
+    openDownload: true,
+    preTokenOpenDownload: true,
     tokenAddress: tokenConfigured ? config.tokenAddress : null,
+    shareOnly: true,
   };
 
   if (!normalized) {
     return { ...base, reason: 'missing_address' };
   }
 
-  // Pre-launch: token not configured. Download may still open via bypass flag.
   if (!tokenConfigured) {
     return {
       ...base,
-      allowed: config.preTokenOpenDownload,
       balance: 0,
-      reason: config.preTokenOpenDownload
-        ? 'pre_token_open_download'
-        : 'token_not_configured',
+      reason: 'token_not_configured_share_stubs',
     };
   }
 
   if (!config.tokenChainRpc) {
     return {
       ...base,
-      allowed: false,
       reason: 'rpc_not_configured',
     };
   }
 
   try {
-    // Lazy-load ethers so the app starts even if unused pre-launch
     const { ethers } = require('ethers');
     const provider = new ethers.JsonRpcProvider(config.tokenChainRpc);
     const contract = new ethers.Contract(config.tokenAddress, ERC20_ABI, provider);
@@ -64,28 +60,22 @@ async function checkPaywall(address) {
     const holdOk = balance >= minHold;
     return {
       ...base,
-      allowed: holdOk || config.preTokenOpenDownload,
       balance,
-      reason: holdOk
-        ? 'hold_ok'
-        : config.preTokenOpenDownload
-          ? 'pre_token_open_download'
-          : 'insufficient_balance',
+      eligibleForShare: holdOk,
+      reason: holdOk ? 'hold_ok_share_eligible' : 'below_min_hold_share_zero',
     };
   } catch (err) {
     return {
       ...base,
-      allowed: config.preTokenOpenDownload,
       reason: 'rpc_error',
       error: String(err.message || err),
     };
   }
 }
 
-function canDownload(paywallResult) {
-  if (!paywallResult) return false;
-  if (config.preTokenOpenDownload) return true;
-  return Boolean(paywallResult.allowed && paywallResult.tokenConfigured);
+/** @deprecated Download is always open. */
+function canDownload() {
+  return true;
 }
 
 module.exports = { checkPaywall, canDownload };

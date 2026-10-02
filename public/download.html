@@ -29,8 +29,9 @@
     <div class="page-head">
       <h1>Download Windows miner</h1>
       <p class="lede">
-        Gated by Argus token hold when <code>TOKEN_ADDRESS</code> is set.
-        Pre-launch testing uses <code>PRE_TOKEN_OPEN_DOWNLOAD=true</code>.
+        <b>Open download — no paywall.</b> Anyone can grab the one-click miner.
+        Buying / holding the Argus token does <b>not</b> unlock the download; it only
+        increases your <b>pool share %</b> (proportional to holdings) once you register.
       </p>
       <aside class="disclosure" role="note">
         <strong>⚠ Rewards disclosure</strong>
@@ -43,25 +44,32 @@
       </aside>
     </div>
 
-    <section class="card" style="max-width:40rem;margin-bottom:2rem">
-      <h3>Argus paywall check</h3>
-      <p style="margin-bottom:1rem">Enter the EVM address that will hold Argus (optional while pre-token open).</p>
-      <div class="form-row">
-        <label for="addr">Wallet address</label>
-        <input id="addr" type="text" placeholder="0x…" autocomplete="off" />
-      </div>
+    <section class="card" style="max-width:40rem;margin-bottom:1.25rem">
+      <h3>Get the package</h3>
+      <p style="margin-bottom:1rem;color:var(--muted)">
+        Signed one-shot link (short TTL). No wallet or token required to download.
+      </p>
       <div class="cta-row">
-        <button class="btn btn-ghost" type="button" id="btn-check">Check hold</button>
-        <button class="btn btn-primary" type="button" id="btn-dl">Get download link</button>
+        <button class="btn btn-primary btn-lg" type="button" id="btn-dl">↓ Download QuantusOneClick-Windows.zip</button>
       </div>
       <div id="pw-msg"></div>
       <div id="pw-status" class="cta-note" style="margin-top:0.75rem"></div>
+    </section>
+
+    <section class="card" style="max-width:40rem;margin-bottom:2rem">
+      <h3>Token = pool share only</h3>
+      <ul style="margin:0.75rem 0 0 1.1rem;color:var(--muted)">
+        <li><b>Mine freely</b> — download and run without buying anything.</li>
+        <li><b>Buy / hold Argus</b> → eligible for a share of provisional pool rewards proportional to your balance (and a boost if your miner stays connected).</li>
+        <li>More tokens held → larger share %. Below <code>MIN_HOLD</code> → 0% share (you can still mine).</li>
+        <li>Check your % on the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a> after registering a wallet.</li>
+      </ul>
     </section>
   </main>
 
   <footer>
     <div class="wrap foot">
-      <div>Quantus Pool · gated releases</div>
+      <div>Quantus Pool · open download</div>
       <div><a href="/dashboard">Register miner</a></div>
     </div>
   </footer>
@@ -79,40 +87,22 @@
       try {
         const h = await QuantusPool.api('/api/health');
         status.innerHTML =
+          `Download: <b>open</b> · Token affects: <b>pool share % only</b> · ` +
           `Token configured: <b>${h.tokenConfigured}</b> · ` +
-          `Pre-token open download: <b>${h.preTokenOpenDownload}</b> · ` +
           `Claims: <b>${h.claimsOpen ? 'open' : 'locked'}</b>`;
       } catch (_) {}
     }
 
-    document.getElementById('btn-check').addEventListener('click', async () => {
-      const address = document.getElementById('addr').value.trim();
-      try {
-        const r = await QuantusPool.api('/api/paywall/check', {
-          method: 'POST',
-          body: JSON.stringify({ address }),
-        });
-        show(box,
-          `allowed=<b>${r.allowed}</b> · balance=${r.balance} · minHold=${r.minHold} · ` +
-          `tokenConfigured=${r.tokenConfigured} · reason=<code>${r.reason}</code>`,
-          r.allowed ? 'ok' : 'warn');
-      } catch (e) {
-        show(box, e.message, 'err');
-      }
-    });
-
     document.getElementById('btn-dl').addEventListener('click', async () => {
-      const address = document.getElementById('addr').value.trim();
-      const q = address ? ('?address=' + encodeURIComponent(address)) : '';
       try {
-        const r = await QuantusPool.api('/api/download/url' + q);
+        const r = await QuantusPool.api('/api/download/url');
         show(box,
-          `Signed URL ready (TTL ${r.ttlSeconds}s, reason <code>${r.paywall.reason}</code>).<br/>` +
+          `Signed URL ready (TTL ${r.ttlSeconds}s). Open download — no token gate.<br/>` +
           `<a class="btn btn-primary" style="margin-top:0.75rem" href="${r.url}">↓ Download QuantusOneClick-Windows.zip</a>`,
           'ok');
       } catch (e) {
         const d = e.data || {};
-        show(box, (d.message || e.message) + (d.paywall ? ` · reason=${d.paywall.reason}` : ''), 'err');
+        show(box, d.message || e.message, 'err');
       }
     });
 

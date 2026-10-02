@@ -18,10 +18,11 @@
     return Number(n || 0).toLocaleString();
   }
 
-  function formatShare(s) {
-    const v = Number(s);
-    if (!Number.isFinite(v)) return '—';
-    return (v * 100).toFixed(1) + '%';
+  function shortHash(h) {
+    if (!h || typeof h !== 'string') return '—';
+    if (h === 'provisional') return 'provisional';
+    if (h.length <= 14) return h;
+    return h.slice(0, 8) + '…' + h.slice(-6);
   }
 
   function relativeTime(iso) {
@@ -38,14 +39,14 @@
   function mount(container, opts) {
     if (!container) return null;
     opts = opts || {};
-    const root = el('div', 'miner-viz' + (opts.compact ? ' compact' : ''));
+    const root = el('div', 'miner-viz' + (opts.compact ? ' compact' : '') + (opts.hero ? ' hero-viz' : ''));
     root.setAttribute('role', 'region');
-    root.setAttribute('aria-label', 'Pool miner status visualization');
+    root.setAttribute('aria-label', 'Quantus mainnet blocks visualization');
 
     root.innerHTML = `
       <div class="miner-viz-head">
-        <h3><span class="qmark" style="width:22px;height:22px;font-size:0.75rem;display:inline-grid;place-items:center;border-radius:6px;background:var(--orange);color:#111;font-weight:800">Q</span> Pool miner</h3>
-        <span class="miner-viz-live"><span class="dot" aria-hidden="true"></span> Hashing</span>
+        <h3><span class="qmark" style="width:22px;height:22px;font-size:0.75rem;display:inline-grid;place-items:center;border-radius:6px;background:var(--orange);color:#111;font-weight:800">Q</span> Mainnet miner</h3>
+        <span class="miner-viz-live" data-live-badge><span class="dot" aria-hidden="true"></span> <span data-live-label>Connecting…</span></span>
       </div>
       <div class="miner-viz-stage" aria-hidden="true">
         <div class="viz-grid"></div>
@@ -53,34 +54,40 @@
         <div class="viz-ring r1"></div>
         <div class="viz-ring r2"></div>
         <div class="viz-core">Q</div>
+        <div class="viz-flash" data-flash></div>
       </div>
       <div class="miner-viz-stats">
         <div class="miner-viz-stat">
-          <div class="lbl">Blocks mined</div>
+          <div class="lbl">Chain height</div>
           <div class="val" data-blocks>0</div>
-          <div class="sub" data-blocks-sub>attributed to pool</div>
+          <div class="sub" data-blocks-sub>Quantus mainnet</div>
+        </div>
+        <div class="miner-viz-stat">
+          <div class="lbl">Last block</div>
+          <div class="val" data-last style="font-size:1.05rem">—</div>
+          <div class="sub" data-last-sub>waiting…</div>
         </div>
         <div class="miner-viz-stat">
           <div class="lbl">Pool hashrate</div>
-          <div class="val" data-hash style="font-size:1.15rem">—</div>
-          <div class="sub">active (15m)</div>
-        </div>
-        <div class="miner-viz-stat">
-          <div class="lbl">Active miners</div>
-          <div class="val" data-miners>—</div>
-          <div class="sub">heartbeats</div>
+          <div class="val" data-hash style="font-size:1.05rem">—</div>
+          <div class="sub"><span data-miners>—</span> miners · 15m</div>
         </div>
       </div>
+      <div class="miner-viz-share" data-share-wrap hidden>
+        <div class="lbl">Your pool share</div>
+        <div class="val" data-share-pct>—</div>
+        <div class="sub" data-share-sub>from token holdings</div>
+      </div>
       <div class="miner-viz-blocks">
-        <h4>Recent blocks</h4>
+        <h4>Recent blocks <a class="miner-viz-explorer" data-explorer href="https://explorer.quantus.com/" target="_blank" rel="noopener">explorer ↗</a></h4>
         <table>
-          <thead><tr><th>Height</th><th>When</th><th>Pool share</th></tr></thead>
+          <thead><tr><th>Height</th><th>When</th><th>Hash</th><th>Reward</th></tr></thead>
           <tbody data-blocks-body>
-            <tr><td colspan="3" style="color:var(--muted)">Loading…</td></tr>
+            <tr><td colspan="4" style="color:var(--muted)">Loading…</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="miner-viz-note"><b>Status viz only</b> — not a browser GPU miner. Block counts may be demo/placeholder until the indexer is live.</p>
+      <p class="miner-viz-note" data-note><b>Status viz</b> — animated hashing is illustrative; height &amp; list come from the chain feed.</p>
     `;
 
     container.innerHTML = '';
@@ -92,13 +99,26 @@
     const minersEl = root.querySelector('[data-miners]');
     const body = root.querySelector('[data-blocks-body]');
     const stage = root.querySelector('.miner-viz-stage');
+    const flash = root.querySelector('[data-flash]');
+    const liveBadge = root.querySelector('[data-live-badge]');
+    const liveLabel = root.querySelector('[data-live-label]');
+    const lastEl = root.querySelector('[data-last]');
+    const lastSub = root.querySelector('[data-last-sub]');
+    const shareWrap = root.querySelector('[data-share-wrap]');
+    const sharePctEl = root.querySelector('[data-share-pct]');
+    const shareSub = root.querySelector('[data-share-sub]');
+    const noteEl = root.querySelector('[data-note]');
+    const explorerA = root.querySelector('[data-explorer]');
 
     let displayedBlocks = 0;
     let targetBlocks = 0;
+    let lastSeenHeight = null;
     let tickTimer = null;
     let pollTimer = null;
     let hashTimer = null;
     let sparkTimer = null;
+    let relativeTimer = null;
+    let lastBlockIso = null;
 
     function spawnHash() {
       const span = el('span', null, randHex(10));
@@ -120,6 +140,15 @@
       setTimeout(() => s.remove(), 1800);
     }
 
+    function flashNewBlock() {
+      if (!flash) return;
+      flash.classList.remove('on');
+      void flash.offsetWidth;
+      flash.classList.add('on');
+      stage.classList.add('block-hit');
+      setTimeout(() => stage.classList.remove('block-hit'), 600);
+    }
+
     function animateBlocksToward(next) {
       targetBlocks = Number(next) || 0;
       if (tickTimer) return;
@@ -139,64 +168,144 @@
         blocksEl.classList.remove('tick');
         void blocksEl.offsetWidth;
         blocksEl.classList.add('tick');
-      }, 80);
+      }, 70);
     }
 
     function renderRecent(blocks) {
       if (!blocks || !blocks.length) {
-        body.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">No recent blocks yet</td></tr>';
+        body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No recent blocks yet</td></tr>';
         return;
       }
       body.innerHTML = blocks
         .slice(0, 8)
-        .map(
-          (b) =>
-            `<tr>
+        .map((b) => {
+          const reward =
+            b.reward != null && Number.isFinite(Number(b.reward))
+              ? Number(b.reward).toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' QTC'
+              : '—';
+          return `<tr>
               <td class="mono">#${formatNum(b.height)}</td>
               <td>${relativeTime(b.foundAt || b.time)}</td>
-              <td>${formatShare(b.poolShare != null ? b.poolShare : b.share)}</td>
-            </tr>`
-        )
+              <td class="mono">${shortHash(b.hashShort || b.hash)}</td>
+              <td>${reward}</td>
+            </tr>`;
+        })
         .join('');
+    }
+
+    function setLiveState(live, source) {
+      liveBadge.classList.toggle('provisional', !live);
+      liveLabel.textContent = live ? 'Live mainnet' : 'Provisional';
+      liveBadge.title = live
+        ? 'Blocks from Quantus indexer (sub2.quantus.com)'
+        : 'Indexer unavailable — tip advances from last known height';
+    }
+
+    function updateLastBlockLabel() {
+      if (!lastBlockIso) {
+        lastEl.textContent = '—';
+        return;
+      }
+      lastEl.textContent = relativeTime(lastBlockIso);
+    }
+
+    async function refreshShare() {
+      if (!global.QuantusPool || !shareWrap) return;
+      const miner = global.QuantusPool.loadMiner && global.QuantusPool.loadMiner();
+      const address = miner && miner.walletAddress;
+      if (!address) {
+        shareWrap.hidden = true;
+        return;
+      }
+      try {
+        const data = await global.QuantusPool.api(
+          '/api/rewards/estimate?address=' + encodeURIComponent(address)
+        );
+        shareWrap.hidden = false;
+        sharePctEl.textContent = Number(data.sharePct || 0).toFixed(2) + '%';
+        shareSub.textContent =
+          (data.connected ? 'connected · ' : '') +
+          'balance ' +
+          Number(data.balance || 0).toLocaleString() +
+          (data.balanceStub ? ' (stub)' : '') +
+          ' · ' +
+          global.QuantusPool.shortAddr(address);
+      } catch {
+        shareWrap.hidden = false;
+        sharePctEl.textContent = '—';
+        shareSub.textContent = 'could not load share for ' + global.QuantusPool.shortAddr(address);
+      }
     }
 
     async function refresh() {
       try {
         const s = await global.QuantusPool.api('/api/pool/stats');
-        const mined =
-          s.blocksMined != null
-            ? s.blocksMined
-            : s.blocksAttributed != null
-              ? s.blocksAttributed
-              : 0;
-        animateBlocksToward(mined);
+        const height =
+          s.chainHeight != null
+            ? s.chainHeight
+            : s.latestHeight != null
+              ? s.latestHeight
+              : s.blocksMined != null
+                ? s.blocksMined
+                : 0;
+        const live = Boolean(s.chainLive);
+        setLiveState(live, s.blocksSource);
+
+        if (lastSeenHeight != null && height > lastSeenHeight) {
+          flashNewBlock();
+        }
+        lastSeenHeight = height;
+        animateBlocksToward(height);
+
         hashEl.textContent = global.QuantusPool.formatHashrate(s.totalHashrate);
         minersEl.textContent = formatNum(s.activeMiners);
         renderRecent(s.recentBlocks || []);
+
+        lastBlockIso = s.lastBlockAt || (s.recentBlocks && s.recentBlocks[0] && (s.recentBlocks[0].foundAt || s.recentBlocks[0].time)) || null;
+        updateLastBlockLabel();
+        lastSub.textContent = live ? 'mainnet tip' : 'provisional tip';
+
         const sub = root.querySelector('[data-blocks-sub]');
         if (sub) {
-          sub.textContent = s.placeholders && s.placeholders.blocksMined
-            ? 'demo / placeholder until indexer live'
-            : 'attributed to pool';
+          sub.textContent = live
+            ? 'Quantus mainnet · live'
+            : 'provisional (feed down)';
+        }
+
+        if (s.explorerUrl && explorerA) {
+          explorerA.href = s.explorerUrl.replace(/\/?$/, '/');
+        }
+
+        if (noteEl) {
+          noteEl.innerHTML = live
+            ? '<b>Live mainnet</b> — height &amp; recent blocks from <code>sub2.quantus.com</code> GraphQL (explorer indexer). Hashing animation is visual only.'
+            : '<b>Provisional</b> — mainnet feed unavailable' +
+              (s.chainError ? ' (' + String(s.chainError).slice(0, 80) + ')' : '') +
+              '. Tip advances from last known height (~12s). Not a browser GPU miner.';
         }
       } catch (e) {
+        setLiveState(false, 'provisional');
         body.innerHTML =
-          '<tr><td colspan="3" style="color:var(--muted)">Could not load pool stats</td></tr>';
+          '<tr><td colspan="4" style="color:var(--muted)">Could not load pool stats</td></tr>';
       }
     }
 
-    hashTimer = setInterval(spawnHash, 380);
-    sparkTimer = setInterval(spawnSpark, 700);
-    for (let i = 0; i < 6; i++) setTimeout(spawnHash, i * 120);
+    hashTimer = setInterval(spawnHash, 320);
+    sparkTimer = setInterval(spawnSpark, 650);
+    for (let i = 0; i < 6; i++) setTimeout(spawnHash, i * 100);
     refresh();
-    pollTimer = setInterval(refresh, opts.pollMs || 12000);
+    refreshShare();
+    pollTimer = setInterval(refresh, opts.pollMs || 4000);
+    relativeTimer = setInterval(updateLastBlockLabel, 1000);
 
     return {
       refresh,
+      refreshShare,
       destroy() {
         clearInterval(hashTimer);
         clearInterval(sparkTimer);
         clearInterval(pollTimer);
+        clearInterval(relativeTimer);
         if (tickTimer) clearInterval(tickTimer);
         root.remove();
       },

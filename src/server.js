@@ -12,9 +12,11 @@ const paywallRouter = require('./routes/paywall');
 const downloadRouter = require('./routes/download');
 const claimsRouter = require('./routes/claims');
 const rewardsRouter = require('./routes/rewards');
+const { startChainPoller } = require('./services/chain');
 
 // Init DB on boot
 getDb();
+startChainPoller();
 
 const app = express();
 
@@ -32,7 +34,9 @@ app.get('/api/health', (_req, res) => {
     service: 'quantus-pool-site',
     claimsOpen: config.claimsOpen,
     tokenConfigured: Boolean(config.tokenAddress),
-    preTokenOpenDownload: config.preTokenOpenDownload,
+    openDownload: true,
+    preTokenOpenDownload: true,
+    tokenAffects: 'pool_share_only',
     operatorWormhole: config.operatorWormhole,
   });
 });
@@ -48,7 +52,7 @@ app.use('/api/rewards', rewardsRouter);
 app.use('/releases', (_req, res) => {
   res.status(403).json({
     error: 'direct_download_forbidden',
-    message: 'Use GET /api/download/url after paywall check (or PRE_TOKEN_OPEN_DOWNLOAD).',
+    message: 'Use GET /api/download/url for a signed one-shot link. Download is open — no token gate.',
   });
 });
 
@@ -78,7 +82,7 @@ app.use((err, _req, res, _next) => {
 app.listen(config.port, config.host, () => {
   console.log(`Quantus pool site listening on http://${config.host}:${config.port}`);
   console.log(`  CLAIMS_OPEN=${config.claimsOpen}`);
-  console.log(`  PRE_TOKEN_OPEN_DOWNLOAD=${config.preTokenOpenDownload}`);
+  console.log(`  OPEN_DOWNLOAD=true (token holdings → pool share % only)`);
   console.log(`  TOKEN_ADDRESS=${config.tokenAddress || '(empty — pre-launch)'}`);
   console.log(`  OPERATOR_WORMHOLE=${config.operatorWormhole}`);
   console.log(`  DB=${config.databasePath}`);

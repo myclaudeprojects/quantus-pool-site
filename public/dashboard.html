@@ -49,7 +49,7 @@
       </article>
       <article class="card">
         <div class="stat-label">QTC price</div>
-        <div class="stat-value" id="dash-qtc-price">—</div>
+        <div class="stat-value"><a class="stat-price-link" id="dash-qtc-price" href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">—</a></div>
         <p id="dash-qtc-note">CoinGecko · id quantus</p>
       </article>
     </div>
@@ -281,14 +281,20 @@
         document.getElementById('dash-connected').textContent = Number(s.connectedCount || 0).toLocaleString();
         document.getElementById('dash-connected-note').textContent =
           'Active heartbeats (last ' + (s.connectedWindowMinutes || 15) + 'm) · multiplier ' + (s.connectedMultiplier || 1.5) + '×';
+        const priceEl = document.getElementById('dash-qtc-price');
+        const cg = s.coingeckoUrl || 'https://www.coingecko.com/en/coins/quantus';
+        priceEl.href = cg;
         if (s.qtcPriceUsd != null) {
-          document.getElementById('dash-qtc-price').textContent =
+          priceEl.textContent =
             '$' + Number(s.qtcPriceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 });
-          document.getElementById('dash-qtc-note').textContent =
-            (s.priceSource || 'coingecko') + (s.priceCached ? ' · cached' : ' · live');
+          document.getElementById('dash-qtc-note').innerHTML =
+            '<a href="' + cg + '" target="_blank" rel="noopener" style="color:var(--orange-bright)">CoinGecko / quantus</a>' +
+            (s.priceCached ? ' · cached' : ' · live');
         } else {
-          document.getElementById('dash-qtc-price').textContent = '—';
-          document.getElementById('dash-qtc-note').textContent = s.priceError || 'unavailable';
+          priceEl.textContent = '—';
+          document.getElementById('dash-qtc-note').innerHTML =
+            (s.priceError || 'unavailable') +
+            ' · <a href="' + cg + '" target="_blank" rel="noopener" style="color:var(--orange-bright)">open</a>';
         }
       } catch (e) {
         document.getElementById('dash-connected-note').textContent = 'Could not load pool stats';

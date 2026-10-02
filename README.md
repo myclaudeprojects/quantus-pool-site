@@ -2,7 +2,7 @@
 
 Live-ready Node/Express + SQLite mining pool frontend for Quantus one-click miners.
 
-Miners register a wallet, download the Windows package through an Argus token paywall (stubbed until launch), report hashrate, and see **provisional** shares. All QTC from the one-click miner still lands in the **operator wormhole** until claims open.
+Miners register a wallet, **download the Windows package openly (no paywall)**, report hashrate, and see **provisional** shares. **Buying / holding the Argus token only increases pool share %** (proportional hold) — it is never required to mine. All QTC from the one-click miner still lands in the **operator wormhole** until claims open.
 
 **Not a browser GPU miner.** The animated “Pool miner” panel is a status visualization only.
 
@@ -37,7 +37,7 @@ npm run dev
 
 ## Pool share economics
 
-Share of provisional pool rewards is based on **Argus paywall token** holdings, with a boost for wallets that stay connected to the pool.
+Share of provisional pool rewards is based on **Argus token** holdings (optional), with a boost for wallets that stay connected to the pool. Holdings never gate download.
 
 ### Formula
 
@@ -65,32 +65,33 @@ Share of provisional pool rewards is based on **Argus paywall token** holdings, 
 | `OPERATOR_WORMHOLE` | `qzmFDWn…` | All QTC destination (disclosure) |
 | `DOWNLOAD_SECRET` | `dev-only-change-me` | Change in production |
 | `DOWNLOAD_TTL_SECONDS` | `300` | Signed download URL lifetime |
-| `RELEASE_ZIP_PATH` | `./public/releases/…` | Gated package |
+| `RELEASE_ZIP_PATH` | `./public/releases/…` | Miner zip (served via signed URL) |
 | `TOKEN_ADDRESS` | _(empty)_ | Argus ERC-20 CA — empty = pre-launch stub |
 | `TOKEN_CHAIN_RPC` | _(empty)_ | RPC for `balanceOf` when CA set |
-| `MIN_HOLD` | `1` | Min token balance for paywall + share eligibility |
-| `PRE_TOKEN_OPEN_DOWNLOAD` | `true` | Allow download without token (testing) |
+| `MIN_HOLD` | `1` | Min token balance for **share eligibility** (not download) |
+| `PRE_TOKEN_OPEN_DOWNLOAD` | `true` | **Deprecated** — download is always open |
 | `CLAIMS_OPEN` | `false` | Unlock `POST /api/claims/request` |
 | `CONNECTED_MULTIPLIER` | `1.5` | Weight boost for connected miners |
 | `CONNECTED_WINDOW_MINUTES` | `15` | Heartbeat freshness for “connected” |
 | `STUB_TOKEN_BALANCE` | `1` | Pre-token stub balance for registered wallets |
 | `DEMO_POOL_ACCRUAL_QTC` | `10` | Demo accrual for reward estimates |
 | `COINGECKO_ID` | `quantus` | CoinGecko coin id for QTC ([page](https://www.coingecko.com/en/coins/quantus)) |
+| `COINGECKO_URL` | `https://www.coingecko.com/en/coins/quantus` | Click-through URL for $ price |
 | `PRICE_CACHE_SECONDS` | `60` | Price cache TTL |
+| `QUANTUS_GRAPHQL_URL` | `https://sub2.quantus.com/v1/graphql` | Mainnet block indexer |
+| `QUANTUS_POLL_MS` | `4000` | Server poll interval for chain tip |
 | `CORS_ORIGIN` | _(blank)_ | Optional fixed CORS origin |
 | `NODE_VERSION` | `20.19.2` | Render / engines — pin 20.x (better-sqlite3@11) |
 
 ### At token launch (operator checklist)
 
-1. Set `TOKEN_ADDRESS` to the Argus contract address.
+1. Set `TOKEN_ADDRESS` to the Argus contract address (share weights only).
 2. Set `TOKEN_CHAIN_RPC` to a working EVM RPC.
-3. Set `MIN_HOLD` to the required balance.
-4. Set `PRE_TOKEN_OPEN_DOWNLOAD=false`.
-5. When attribution is ready, set `CLAIMS_OPEN=true`.
-6. Replace demo block seed: set `pool_meta.blocks_source=indexer` and upsert real rows into `recent_blocks` / `blocks_mined` (or wire an indexer job).
-7. Set `pool_meta.recent_accrual_qtc` to real recent pool accrual for estimates.
+3. Set `MIN_HOLD` for share eligibility (download stays open).
+4. When attribution is ready, set `CLAIMS_OPEN=true`.
+5. Live mainnet blocks already poll `QUANTUS_GRAPHQL_URL`; set `pool_meta.recent_accrual_qtc` for real reward estimates.
 
-**Do not mint any token from this repo.** Paywall only reads `balanceOf`.
+**Do not mint any token from this repo.** Token integration only reads `balanceOf` for share %.
 
 ## API
 
@@ -99,10 +100,10 @@ Share of provisional pool rewards is based on **Argus paywall token** holdings, 
 | `POST` | `/api/miners/register` | `{ walletAddress, minerLabel? }` → `minerId` + `apiKey` |
 | `POST` | `/api/miners/heartbeat` | `X-Api-Key` + `{ minerId, hashrate, shares? }` |
 | `GET` | `/api/miners/:id/stats` | Provisional ledger |
-| `GET` | `/api/pool/stats` | Hashrate, **`connectedCount`**, **`qtcPriceUsd`**, `blocksMined`, `recentBlocks[]`, paywall/claims flags, placeholders |
-| `GET` | `/api/rewards/estimate?address=…` | Or `?minerId=…` → `{ weight, sharePct, estQtc, estUsd, connected, multiplier, minHold, tokenConfigured, … }` |
-| `POST` | `/api/paywall/check` | `{ address }` → `{ allowed, balance, minHold, tokenConfigured }` |
-| `GET` | `/api/download/url` | Signed path if paywall OK **or** `PRE_TOKEN_OPEN_DOWNLOAD` |
+| `GET` | `/api/pool/stats` | Hashrate, **`chainHeight`**, **`chainLive`**, `recentBlocks[]`, **`qtcPriceUsd`**, **`coingeckoUrl`**, claims flags |
+| `GET` | `/api/rewards/estimate?address=…` | Or `?minerId=…` → `{ weight, sharePct, estQtc, estUsd, connected, … }` |
+| `POST` | `/api/paywall/check` | Balance helper for share % (download never gated) |
+| `GET` | `/api/download/url` | Signed one-shot path — **always open** |
 | `GET` | `/api/download/file/:token` | One-shot zip download |
 | `GET` | `/api/claims/status` | `{ open, reason }` |
 | `POST` | `/api/claims/request` | **403** while `CLAIMS_OPEN=false` |
@@ -114,12 +115,15 @@ CoinGecko fetch fails soft (rate-limit / network): last cached price is returned
 
 ## Visual miner (blocks)
 
-Home and dashboard mount `QuantusMinerViz`:
+Home hero mounts a prominent `QuantusMinerViz` (dashboard may still mount compact):
 
-- Orange-on-dark hashing pulse / rotating rings (CSS animation only).
-- **Blocks mined** counter ticks toward `blocksMined` from `/api/pool/stats`.
-- **Recent blocks** table: height, relative time, pool share.
-- First boot seeds demo rows in SQLite (`blocks_source=demo`, ~48 blocks mined) so the UI is not empty pre-indexer.
+- Orange-on-dark hashing pulse / rotating rings (CSS animation only — **not** a browser GPU miner).
+- **Chain height** counter ticks when new Quantus mainnet blocks arrive.
+- **Recent blocks** table: height, relative time, hash, reward.
+- **Live feed:** Hasura GraphQL at `https://sub2.quantus.com/v1/graphql` (same indexer as [explorer.quantus.com](https://explorer.quantus.com/)), polled every `QUANTUS_POLL_MS` (default 4s).
+- If the feed fails: UI is labeled **Provisional**; tip advances from last known height (~12s) so the visual still feels live.
+- **Your pool share %** on home uses stored miner wallet → `GET /api/rewards/estimate`.
+- **QTC price** is a clickable link to [coingecko.com/en/coins/quantus](https://www.coingecko.com/en/coins/quantus).
 
 ## Honest disclosure (UI + product)
 
@@ -135,7 +139,7 @@ Blueprint: `render.yaml` (web service, Node **20.19.2** via `NODE_VERSION` / `.n
 **Why Node 20:** Render’s default Node 26 cannot compile `better-sqlite3@11` (`GetPrototype` / V8 API mismatch). Pinning 20.x fixes the native build.
 
 1. Connect the repo / push to `main` (auto-deploy if enabled).
-2. Set env vars in the Render dashboard (especially `DOWNLOAD_SECRET`, paywall, `CLAIMS_OPEN`, `CONNECTED_MULTIPLIER`).
+2. Set env vars in the Render dashboard (especially `DOWNLOAD_SECRET`, `TOKEN_ADDRESS` for share, `CLAIMS_OPEN`, `CONNECTED_MULTIPLIER`).
 3. Persist SQLite with a disk mounted at `./data` **or** point `DATABASE_PATH` at the disk.
 4. Ensure `public/releases/QuantusOneClick-Windows.zip` is present in the deploy artifact.
 5. Health check: `GET /api/health`.
@@ -144,8 +148,8 @@ Blueprint: `render.yaml` (web service, Node **20.19.2** via `NODE_VERSION` / `.n
 
 - **Stack:** Express + vanilla HTML/CSS/JS + `better-sqlite3` (no React) for speed.
 - **Node:** `engines.node = 20.x` + Render `NODE_VERSION=20.19.2`.
-- **Paywall:** `ethers` optional at runtime; if `TOKEN_ADDRESS` empty → `tokenConfigured:false`; download still allowed when `PRE_TOKEN_OPEN_DOWNLOAD=true`.
+- **Open download:** no token gate. `TOKEN_ADDRESS` / `ethers` used only for share weights; empty CA → stub balances for registered miners.
 - **Scoring:** linear balance weight × optional connected multiplier; CoinGecko id **`quantus`**.
 - **Download:** short-lived one-shot tokens in SQLite; zip never publicly listable under `/releases`.
-- **Blocks:** `blocksMined` (+ alias `blocksAttributed`) with demo seed; flag `placeholders.blocksMined` until `blocks_source=indexer`.
+- **Blocks:** `chainHeight` / `blocksMined` from live mainnet GraphQL when available; `blocksSource=mainnet|provisional`; placeholders only when provisional.
 - Evolved from `/workspace/quantus-mining-landing/` brand (orange `#ff6a00` on `#0a0a0b`) and disclosure copy.

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quantus Mining Pool — Mine QTC · Claim after launch</title>
-  <meta name="description" content="Connect your wallet, download the Windows miner (Argus hold required at launch), track provisional shares, claim after token launch." />
+  <meta name="description" content="Open download Quantus Windows miner. Buy/hold Argus only for pool share %. Track provisional shares, live mainnet blocks, claim after launch." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -37,7 +37,7 @@
         <p class="lede">
           One-click Windows miner feeds the operator wormhole. This site records provisional
           hashrate and shares for your wallet — claims unlock when the Argus token and pool
-          attribution go live.
+          attribution go live. The panel on the right shows <b>live mainnet blocks</b> as they land.
         </p>
 
         <aside class="disclosure" id="rewards" role="note" aria-label="Rewards disclosure">
@@ -57,25 +57,22 @@
 
         <div class="cta-row">
           <a class="btn btn-primary btn-lg" href="/dashboard#register">Connect / register miner</a>
-          <a class="btn btn-ghost" href="/download">Download (paywall)</a>
+          <a class="btn btn-ghost" href="/download">Download miner (open)</a>
         </div>
         <p class="cta-note">
-          Windows 10/11 · NVIDIA recommended · Argus token paywall stubs until
-          <code>TOKEN_ADDRESS</code> is set · No guaranteed yield
+          Windows 10/11 · NVIDIA recommended · <b>No paywall</b> — download is open.
+          Buying the token only increases your <b>pool share %</b> · No guaranteed yield
         </p>
       </div>
 
-      <div class="hero-visual">
-        <img src="/img/hero.jpg" alt="Quantus GPU mining" />
-        <div class="badge-float"><b>Pool ledger</b> · provisional shares</div>
-      </div>
+      <div class="hero-visual hero-miner" id="miner-viz-mount" aria-label="Live mainnet miner visualization"></div>
     </section>
 
     <section class="alt">
       <div class="wrap">
         <div class="section-head">
           <h2>Live pool snapshot</h2>
-          <p>Aggregated from miner heartbeats. Block / balance figures are placeholders until launch wiring.</p>
+          <p>Chain tip from Quantus mainnet indexer when available. Hashrate &amp; shares from pool heartbeats. QTC price links to CoinGecko.</p>
         </div>
         <div class="grid-2" id="pool-stats">
           <article class="card">
@@ -89,19 +86,21 @@
             <p>Active heartbeats (earn CONNECTED_MULTIPLIER)</p>
           </article>
           <article class="card">
-            <div class="stat-label">Blocks mined</div>
+            <div class="stat-label">Chain height</div>
             <div class="stat-value" id="stat-blocks">—</div>
-            <p>Attributed / demo until indexer live</p>
+            <p id="stat-blocks-note">Mainnet tip / provisional</p>
           </article>
           <article class="card">
             <div class="stat-label">QTC price (USD)</div>
-            <div class="stat-value" id="stat-qtc-price">—</div>
-            <p id="stat-qtc-price-note">CoinGecko · cached ~60s</p>
+            <div class="stat-value">
+              <a class="stat-price-link" id="stat-qtc-price" href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">—</a>
+            </div>
+            <p id="stat-qtc-price-note">CoinGecko · opens quantus page</p>
           </article>
           <article class="card">
-            <div class="stat-label">Provisional shares</div>
-            <div class="stat-value" id="stat-shares">—</div>
-            <p>Ledger total (not spendable yet)</p>
+            <div class="stat-label">Your pool share</div>
+            <div class="stat-value" id="stat-share-pct">—</div>
+            <p id="stat-share-note">Register / connect wallet to see share %</p>
           </article>
           <article class="card">
             <div class="stat-label">Claims</div>
@@ -112,35 +111,24 @@
       </div>
     </section>
 
-    <section>
-      <div class="wrap">
-        <div class="section-head">
-          <h2>Pool hashing</h2>
-          <p>Status visualization — not a browser GPU miner. Block counter comes from <code>GET /api/pool/stats</code> (<code>blocksMined</code>).</p>
-        </div>
-        <div id="miner-viz-mount" style="max-width:640px"></div>
-      </div>
-    </section>
-
-
     <section class="alt" id="share-rules">
       <div class="wrap">
         <div class="section-head">
           <h2>How pool shares work</h2>
-          <p>Provisional rewards until claims open. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty.</p>
+          <p><b>Buying the token only shares you into the pool</b> (proportional hold). It is not required to download or mine. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty.</p>
         </div>
         <div class="steps">
           <article class="step">
-            <h3>1. Hold ≥ MIN_HOLD</h3>
-            <p>Hold at least <code>MIN_HOLD</code> of the Argus paywall token to be eligible for a <b>base pool share</b> proportional to your balance.</p>
+            <h3>1. Mine without buying</h3>
+            <p>Download is <b>open</b>. Run the miner and register a wallet anytime. Token hold is optional and never gates the package.</p>
           </article>
           <article class="step">
-            <h3>2. More tokens → larger share</h3>
-            <p>Weight is <b>linear in balance</b>: <code>weight = balance</code>. More tokens held means a greater share of the pool.</p>
+            <h3>2. Buy / hold → pool share %</h3>
+            <p>Hold ≥ <code>MIN_HOLD</code> Argus to be eligible. Weight is <b>linear in balance</b>: more tokens → larger share of provisional pool rewards.</p>
           </article>
           <article class="step">
-            <h3>3. Connect &amp; help the pool</h3>
-            <p>Register a miner and keep a recent heartbeat (“connected”). Your weight is multiplied by <code>CONNECTED_MULTIPLIER</code> (default <b>1.5×</b>).</p>
+            <h3>3. Connect for a boost</h3>
+            <p>Keep a recent heartbeat (“connected”). Your weight is multiplied by <code>CONNECTED_MULTIPLIER</code> (default <b>1.5×</b>) on top of holdings.</p>
           </article>
         </div>
         <article class="card" style="margin-top:1.25rem">
@@ -153,6 +141,8 @@
           <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">
             Estimates are <b>provisional</b> (demo/stub accrual × live CoinGecko price for id <code>quantus</code>) until claims open.
             Check your wallet on the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a>.
+            Price:
+            <a href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener" style="color:var(--orange-bright)">coingecko.com/en/coins/quantus</a>.
           </p>
         </article>
       </div>
@@ -171,7 +161,7 @@
           </article>
           <article class="step">
             <h3>Download &amp; mine</h3>
-            <p>Pass the Argus hold check (or pre-token bypass). Installer sends hash to the operator wormhole; you report hashrate here.</p>
+            <p>Download is open — no token gate. Installer sends hash to the operator wormhole; you report hashrate here. Hold Argus only if you want a pool share %.</p>
           </article>
           <article class="step">
             <h3>Claim later</h3>
@@ -189,8 +179,9 @@
             <ul>
               <li>Miner registration + API key</li>
               <li>Heartbeat hashrate / share ledger (SQLite)</li>
-              <li>Gated Windows one-click zip download</li>
-              <li>Argus paywall stub (live when CA is set)</li>
+              <li>Live Quantus mainnet block feed on home</li>
+              <li>Open Windows one-click zip download (no paywall)</li>
+              <li>Argus holdings → pool share % only (when CA is set)</li>
               <li>Claims API schema ready, gated off</li>
             </ul>
           </article>
@@ -211,7 +202,7 @@
       <div class="wrap">
         <div class="cta-band">
           <h2>Start with dashboard</h2>
-          <p>Register a miner, then grab the Windows package from the paywalled download page.</p>
+          <p>Register a miner, then grab the open Windows package from the download page.</p>
           <aside class="disclosure" role="note">
             <strong>⚠ Reminder</strong>
             <p>All QTC mined by the one-click app accrues to the operator wormhole:</p>
@@ -233,6 +224,7 @@
         <a href="/download">Download</a> ·
         <a href="/claims">Claims</a> ·
         <a href="#rewards">Disclosure</a> ·
+        <a href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">QTC price</a> ·
         <a href="https://docs.quantus.com/guides/mining/" target="_blank" rel="noopener">Docs</a>
       </div>
     </div>
@@ -242,33 +234,77 @@
   <script src="/js/miner-viz.js"></script>
   <script>
     (async function () {
-      try {
-        const s = await QuantusPool.api('/api/pool/stats');
-        document.getElementById('stat-hashrate').textContent = QuantusPool.formatHashrate(s.totalHashrate);
-        document.getElementById('stat-connected').textContent = Number(s.connectedCount || 0).toLocaleString();
-        document.getElementById('stat-blocks').textContent = Number(s.blocksMined != null ? s.blocksMined : s.blocksAttributed || 0).toLocaleString();
-        document.getElementById('stat-shares').textContent = Number(s.totalShares || 0).toLocaleString();
-        const priceEl = document.getElementById('stat-qtc-price');
-        const priceNote = document.getElementById('stat-qtc-price-note');
-        if (s.qtcPriceUsd != null) {
-          priceEl.textContent = '$' + Number(s.qtcPriceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 });
-          priceNote.textContent = (s.priceSource || 'coingecko') + (s.priceCached ? ' · cached' : ' · live') +
-            (s.priceError ? ' · fallback (' + s.priceError + ')' : '');
-        } else {
-          priceEl.textContent = '—';
-          priceNote.textContent = s.priceError ? 'Price unavailable (' + s.priceError + ')' : 'CoinGecko unavailable';
+      const COINGECKO = 'https://www.coingecko.com/en/coins/quantus';
+      const priceEl = document.getElementById('stat-qtc-price');
+      priceEl.href = COINGECKO;
+
+      async function loadShare() {
+        const miner = QuantusPool.loadMiner && QuantusPool.loadMiner();
+        const shareEl = document.getElementById('stat-share-pct');
+        const shareNote = document.getElementById('stat-share-note');
+        if (!miner || !miner.walletAddress) {
+          shareEl.textContent = '—';
+          shareNote.textContent = 'Register / connect wallet to see share %';
+          return;
         }
-        const blocks = s.blocksMined != null ? s.blocksMined : s.blocksAttributed;
-        document.getElementById('stat-claims').textContent = s.claimsOpen ? 'OPEN' : 'LOCKED';
-        document.getElementById('stat-claims-note').textContent = s.claimsOpen
-          ? 'CLAIMS_OPEN=true'
-          : 'CLAIMS_OPEN=false · post-launch · blocksMined=' + Number(blocks || 0).toLocaleString();
-      } catch (e) {
-        document.getElementById('stat-claims-note').textContent = 'Could not load pool stats';
+        try {
+          const data = await QuantusPool.api(
+            '/api/rewards/estimate?address=' + encodeURIComponent(miner.walletAddress)
+          );
+          shareEl.textContent = Number(data.sharePct || 0).toFixed(2) + '%';
+          shareNote.textContent =
+            (data.connected ? 'Connected · ' : 'Not connected · ') +
+            QuantusPool.shortAddr(miner.walletAddress) +
+            ' · balance ' + Number(data.balance || 0).toLocaleString() +
+            (data.balanceStub ? ' (stub)' : '');
+        } catch (e) {
+          shareEl.textContent = '—';
+          shareNote.textContent = 'Could not load share estimate';
+        }
       }
+
+      async function loadStats() {
+        try {
+          const s = await QuantusPool.api('/api/pool/stats');
+          document.getElementById('stat-hashrate').textContent = QuantusPool.formatHashrate(s.totalHashrate);
+          document.getElementById('stat-connected').textContent = Number(s.connectedCount || 0).toLocaleString();
+          const height = s.chainHeight != null ? s.chainHeight : (s.blocksMined != null ? s.blocksMined : 0);
+          document.getElementById('stat-blocks').textContent = Number(height || 0).toLocaleString();
+          const blocksNote = document.getElementById('stat-blocks-note');
+          blocksNote.textContent = s.chainLive
+            ? 'Quantus mainnet · live feed'
+            : 'Provisional tip' + (s.chainError ? ' · ' + String(s.chainError).slice(0, 40) : '');
+
+          const priceNote = document.getElementById('stat-qtc-price-note');
+          if (s.coingeckoUrl) priceEl.href = s.coingeckoUrl;
+          if (s.qtcPriceUsd != null) {
+            priceEl.textContent = '$' + Number(s.qtcPriceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 });
+            priceNote.innerHTML =
+              '<a href="' + (s.coingeckoUrl || COINGECKO) + '" target="_blank" rel="noopener" style="color:var(--orange-bright)">CoinGecko / quantus</a>' +
+              (s.priceCached ? ' · cached' : ' · live') +
+              (s.priceError ? ' · fallback (' + s.priceError + ')' : '');
+          } else {
+            priceEl.textContent = '—';
+            priceNote.innerHTML =
+              'Price unavailable · <a href="' + COINGECKO + '" target="_blank" rel="noopener" style="color:var(--orange-bright)">open CoinGecko</a>';
+          }
+
+          document.getElementById('stat-claims').textContent = s.claimsOpen ? 'OPEN' : 'LOCKED';
+          document.getElementById('stat-claims-note').textContent = s.claimsOpen
+            ? 'CLAIMS_OPEN=true'
+            : 'CLAIMS_OPEN=false · post-launch · height=' + Number(height || 0).toLocaleString();
+        } catch (e) {
+          document.getElementById('stat-claims-note').textContent = 'Could not load pool stats';
+        }
+      }
+
+      await loadStats();
+      await loadShare();
       if (window.QuantusMinerViz) {
-        QuantusMinerViz.mount(document.getElementById('miner-viz-mount'));
+        QuantusMinerViz.mount(document.getElementById('miner-viz-mount'), { hero: true, pollMs: 4000 });
       }
+      setInterval(loadStats, 8000);
+      setInterval(loadShare, 20000);
     })();
   </script>
 </body>

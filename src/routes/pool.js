@@ -5,6 +5,7 @@ const { getDb } = require('../db');
 const config = require('../config');
 const { countConnectedMiners, getRecentAccrualQtc } = require('../services/scoring');
 const { getQtcPriceUsd } = require('../services/price');
+const { getChainSnapshot, refreshChain } = require('../services/chain');
 
 const router = express.Router();
 
@@ -14,30 +15,7 @@ function getMeta(db) {
   );
 }
 
-function getRecentBlocks(db) {
-  try {
-    return db
-      .prepare(
-        `SELECT height, found_at, pool_share, hash
-         FROM recent_blocks
-         ORDER BY height DESC
-         LIMIT 12`
-      )
-      .all()
-      .map((r) => ({
-        height: r.height,
-        foundAt: r.found_at,
-        poolShare: r.pool_share,
-        hash: r.hash,
-        share: r.pool_share,
-        time: r.found_at,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-router.get('/stats', async (_req, res) => {
+router.get('/stats', async (req, res) => {
   const db = getDb();
   const windowSql = `-${config.connectedWindowMinutes} minutes`;
   const activeCutoff = db
@@ -59,12 +37,24 @@ router.get('/stats', async (_req, res) => {
     )
     .get();
 
+  // Optional force refresh for clients that want freshest tip
+  if (String(req.query.refresh || '') === '1') {
+    try {
+      await refreshChain();
+    } catch {
+      /* soft */
+    }
+  }
+
+  const chain = getChainSnapshot();
   const meta = getMeta(db);
-  const blocksMined = Number(meta.blocks_mined || meta.blocks_attributed || 0);
-  const recentBlocks = getRecentBlocks(db);
   const connectedCount = countConnectedMiners(db);
   const price = await getQtcPriceUsd();
   const accrualQtc = getRecentAccrualQtc(db);
+
+  const chainHeight = chain.height != null ? Number(chain.height) : Number(meta.chain_height || 0);
+  const live = Boolean(chain.live && chain.source === 'mainnet');
+  const blocksSource = live ? 'mainnet' : chain.source || meta.blocks_source || 'provisional';
 
   res.json({
     totalHashrate: activeCutoff.total_hashrate,
@@ -75,28 +65,46 @@ router.get('/stats', async (_req, res) => {
     minerCount: totals.miner_count,
     totalShares: totals.total_shares,
     pendingQtc: totals.pending_qtc,
-    blocksMined,
-    blocksAttributed: blocksMined,
+
+    /** Tip height shown on the home miner (mainnet when live). */
+    chainHeight,
+    latestHeight: chainHeight,
+    blocksMined: chainHeight,
+    blocksAttributed: chainHeight,
+    blocksSource,
+    chainLive: live,
+    chainError: chain.error || null,
+    lastBlockAt: chain.lastBlockAt || meta.last_block_at || null,
+    finalizedHeight: chain.finalizedHeight,
+    networkMiners: chain.totalMiners,
+    networkMinerRewards: chain.totalMinerRewards,
+    recentBlocks: chain.recentBlocks || [],
+    explorerUrl: chain.explorerUrl || 'https://explorer.quantus.com',
+    graphqlUrl: config.quantusGraphqlUrl,
+
     poolBalanceQtc: Number(meta.pool_balance_qtc || 0),
     recentAccrualQtc: accrualQtc,
-    recentBlocks,
     qtcPriceUsd: price.qtcPriceUsd,
     priceSource: price.source,
     priceCached: price.cached,
     priceError: price.error,
     coingeckoId: config.coingeckoId,
+    coingeckoUrl: config.coingeckoUrl,
     placeholders: {
-      blocksMined: meta.blocks_source !== 'indexer',
-      blocksAttributed: meta.blocks_source !== 'indexer',
+      blocksMined: !live,
+      blocksAttributed: !live,
       poolBalanceQtc: true,
       recentAccrualQtc: !meta.recent_accrual_qtc,
-      note:
-        'Block attribution and on-chain pool balance are placeholders until launch wiring. Seeded demo blocks power the status viz. Reward estimates use demo/stub accrual until claims.',
+      note: live
+        ? 'Chain tip and recent blocks from Quantus mainnet indexer (sub2.quantus.com GraphQL). Pool share estimates remain provisional until claims.'
+        : 'Mainnet feed unavailable — showing provisional tip (last known height, advancing ~12s). Labeled clearly in UI.',
     },
     operatorWormhole: config.operatorWormhole,
     claimsOpen: config.claimsOpen,
     tokenConfigured: Boolean(config.tokenAddress),
-    preTokenOpenDownload: config.preTokenOpenDownload,
+    openDownload: true,
+    preTokenOpenDownload: true,
+    tokenAffects: 'pool_share_only',
     minHold: config.minHold,
   });
 });

@@ -185,3 +185,97 @@
   font-size: 0.75rem; color: var(--muted);
 }
 .miner-viz-note b { color: var(--warn); }
+
+/* Hero prominence */
+.miner-viz.hero-viz {
+  padding: 1.5rem 1.5rem 1.25rem;
+  box-shadow: 0 0 0 1px rgba(255,106,0,0.12), 0 28px 60px rgba(0,0,0,0.45);
+}
+.miner-viz.hero-viz .miner-viz-stage {
+  height: 180px;
+}
+.miner-viz-live.provisional {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.miner-viz-live.provisional .dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.55);
+}
+
+.viz-flash {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(255,106,0,0.45), transparent 60%);
+  opacity: 0;
+}
+.viz-flash.on {
+  animation: viz-flash-burst 0.55s ease-out;
+}
+@keyframes viz-flash-burst {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.miner-viz-stage.block-hit .viz-core {
+  animation: viz-core-hit 0.55s ease;
+}
+@keyframes viz-core-hit {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.miner-viz-share {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+  column-gap: 0.85rem; row-gap: 0.1rem;
+  align-items: center;
+  background: rgba(255,106,0,0.08);
+  border: 1px solid rgba(255,106,0,0.28);
+  border-radius: 12px;
+  padding: 0.75rem 0.95rem;
+  margin-bottom: 0.85rem;
+}
+.miner-viz-share .lbl {
+  grid-column: 1; grid-row: 1;
+  font-size: 0.72rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600;
+}
+.miner-viz-share .val {
+  grid-column: 1; grid-row: 2;
+  font-size: 1.55rem; font-weight: 800; color: var(--orange);
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+}
+.miner-viz-share .sub {
+  grid-column: 2; grid-row: 1 / span 2;
+  font-size: 0.78rem; color: var(--muted); text-align: right;
+}
+
+.miner-viz-blocks h4 {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
+.miner-viz-explorer {
+  font-size: 0.72rem; color: var(--orange-bright); text-transform: none; letter-spacing: 0;
+  font-weight: 600;
+}
+.miner-viz-explorer:hover { text-decoration: underline; }
+
+a.stat-price-link {
+  color: var(--orange);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255,106,0,0.45);
+}
+a.stat-price-link:hover {
+  color: var(--orange-bright);
+  border-bottom-color: var(--orange-bright);
+}
+
+.hero-visual.hero-miner {
+  aspect-ratio: auto;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.hero-visual.hero-miner .miner-viz {
+  margin: 0;
+}
