@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quantus Mining Pool — Mine QTC · Claim after launch</title>
-  <meta name="description" content="Open download Quantus Windows miner. Buy/hold Argus only for pool share %. Track provisional shares, live mainnet blocks, claim after launch." />
+  <title>Quantus Pool on Arc — Mine QTC · Claim after launch</title>
+  <meta name="description" content="Quantus Pool on Arc — Arc / Argus pool product (Arc QTC ≠ L1 Quantus). Open Windows miner download. Buy/hold Argus QTC for pool share %. Track provisional shares, claim after launch." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -16,7 +16,7 @@
     <div class="wrap nav">
       <a class="brand" href="/">
         <span class="qmark" aria-hidden="true">Q</span>
-        Quantus Pool
+        Quantus Pool on Arc
       </a>
       <nav class="nav-links">
         <a class="hide-sm" href="#how">How it works</a>
@@ -24,6 +24,7 @@
         <a class="hide-sm" href="#rewards">Rewards</a>
         <a class="hide-sm" href="/dashboard">Dashboard</a>
         <a class="hide-sm" href="/claims">Claims</a>
+        <a class="btn btn-buy" data-buy-qtc hidden href="#">Buy QTC</a>
         <a class="btn btn-primary" href="/download">Download miner</a>
       </nav>
     </div>
@@ -32,13 +33,24 @@
   <main id="top">
     <section class="wrap hero">
       <div>
-        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> Pre-token pool · Quantus mainnet</div>
-        <h1>Mine <span>QTC</span>. Track shares. Claim after launch.</h1>
+        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> Pre-token · Quantus Pool on Arc</div>
+        <h1>Mine <span>QTC</span> on Arc. Track shares. Claim after launch.</h1>
         <p class="lede">
+          <b>Quantus Pool on Arc</b> is the Arc / Argus pool product — not L1 Quantus coin.
           One-click Windows miner feeds the operator wormhole. This site records provisional
           hashrate and shares for your wallet — claims unlock when the Argus token and pool
-          attribution go live. The panel on the right shows <b>live mainnet blocks</b> as they land.
+          attribution go live. The panel on the right shows <b>live Quantus mainnet blocks</b>
+          (L1 hashrate feed) as they land.
         </p>
+
+        <aside class="disclosure disclosure-arc" role="note" aria-label="Arc vs L1 disclaimer">
+          <strong>⚠ Arc QTC ≠ L1 Quantus</strong>
+          <p>
+            This site is <b>Quantus Pool on Arc</b> — an Arc network / Argus launchpad token
+            for pool share %. It is <b>not</b> the official L1 Quantus chain coin and does not
+            claim to be. Arc QTC and L1 Quantus are different assets.
+          </p>
+        </aside>
 
         <aside class="disclosure" id="rewards" role="note" aria-label="Rewards disclosure">
           <strong>⚠ Rewards disclosure</strong>
@@ -57,11 +69,12 @@
 
         <div class="cta-row">
           <a class="btn btn-primary btn-lg" href="/dashboard#register">Connect / register miner</a>
+          <a class="btn btn-buy btn-lg" data-buy-qtc hidden href="#">Buy QTC</a>
           <a class="btn btn-ghost" href="/download">Download miner (open)</a>
         </div>
         <p class="cta-note">
           Windows 10/11 · NVIDIA recommended · <b>No paywall</b> — download is open.
-          Buying the token only increases your <b>pool share %</b> · No guaranteed yield
+          Buying Arc QTC on Argus only increases your <b>pool share %</b> · No guaranteed yield
         </p>
       </div>
 
@@ -72,7 +85,7 @@
       <div class="wrap">
         <div class="section-head">
           <h2>Live pool snapshot</h2>
-          <p>Chain tip from Quantus mainnet indexer when available. Hashrate &amp; shares from pool heartbeats. QTC price links to CoinGecko.</p>
+          <p>Chain tip from Quantus mainnet indexer when available. Hashrate &amp; shares from pool heartbeats. CoinGecko price is <b>L1 Quantus</b> reference — Arc QTC is separate (Buy QTC → Argus when live).</p>
         </div>
         <div class="grid-2" id="pool-stats">
           <article class="card">
@@ -95,7 +108,7 @@
             <div class="stat-value">
               <a class="stat-price-link" id="stat-qtc-price" href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">—</a>
             </div>
-            <p id="stat-qtc-price-note">CoinGecko · opens quantus page</p>
+            <p id="stat-qtc-price-note">CoinGecko · L1 Quantus reference</p>
           </article>
           <article class="card">
             <div class="stat-label">Your pool share</div>
@@ -115,7 +128,7 @@
       <div class="wrap">
         <div class="section-head">
           <h2>How pool shares work</h2>
-          <p><b>Buying the token only shares you into the pool</b> (proportional hold). It is not required to download or mine. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty.</p>
+          <p><b>Buying Arc QTC on Argus only shares you into the pool</b> (proportional hold). It is not required to download or mine. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty. Arc QTC ≠ L1 Quantus.</p>
         </div>
         <div class="steps">
           <article class="step">
@@ -124,7 +137,7 @@
           </article>
           <article class="step">
             <h3>2. Buy / hold → pool share %</h3>
-            <p>Hold ≥ <code>MIN_HOLD</code> Argus to be eligible. Weight is <b>linear in balance</b>: more tokens → larger share of provisional pool rewards.</p>
+            <p>Hold ≥ <code>MIN_HOLD</code> Arc QTC (Argus) to be eligible. Weight is <b>linear in balance</b>: more tokens → larger share of provisional pool rewards.</p>
           </article>
           <article class="step">
             <h3>3. Connect for a boost</h3>
@@ -181,7 +194,7 @@
               <li>Heartbeat hashrate / share ledger (SQLite)</li>
               <li>Live Quantus mainnet block feed on home</li>
               <li>Open Windows one-click zip download (no paywall)</li>
-              <li>Argus holdings → pool share % only (when CA is set)</li>
+              <li>Arc QTC (Argus) holdings → pool share % only (when CA is set)</li>
               <li>Claims API schema ready, gated off</li>
             </ul>
           </article>
@@ -190,7 +203,7 @@
             <ul>
               <li>No instant QTC to your wallet</li>
               <li>No guarantee of block attribution</li>
-              <li>Token not launched — hold check is stubbed</li>
+              <li>Arc token not launched — hold check is stubbed (≠ L1 Quantus)</li>
               <li>Electricity and hardware wear are yours</li>
             </ul>
           </article>
@@ -210,6 +223,7 @@
           </aside>
           <div class="cta-row">
             <a class="btn btn-primary btn-lg" href="/dashboard">Open dashboard</a>
+            <a class="btn btn-buy btn-lg" data-buy-qtc hidden href="#">Buy QTC</a>
             <a class="btn btn-ghost" href="https://docs.quantus.com/guides/mining/" target="_blank" rel="noopener">Self-custody docs</a>
           </div>
         </div>
@@ -219,12 +233,13 @@
 
   <footer>
     <div class="wrap foot">
-      <div class="brand"><span class="qmark" style="width:24px;height:24px;font-size:0.85rem;">Q</span> Quantus Pool · pre-token</div>
+      <div class="brand"><span class="qmark" style="width:24px;height:24px;font-size:0.85rem;">Q</span> Quantus Pool on Arc · Arc QTC ≠ L1 Quantus</div>
       <div>
         <a href="/download">Download</a> ·
         <a href="/claims">Claims</a> ·
         <a href="#rewards">Disclosure</a> ·
-        <a href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">QTC price</a> ·
+        <a data-buy-qtc hidden href="#">Buy QTC</a><span data-buy-qtc-sep hidden> · </span>
+        <a href="https://www.coingecko.com/en/coins/quantus" target="_blank" rel="noopener">L1 QTC price</a> ·
         <a href="https://docs.quantus.com/guides/mining/" target="_blank" rel="noopener">Docs</a>
       </div>
     </div>
@@ -300,6 +315,15 @@
 
       await loadStats();
       await loadShare();
+      await QuantusPool.refreshBuyCtas();
+      // Also sync buy URL from pool stats when present
+      try {
+        const s = await QuantusPool.api('/api/pool/stats');
+        QuantusPool.wireBuyCtas(s);
+        document.querySelectorAll('[data-buy-qtc-sep]').forEach((el) => {
+          el.hidden = !QuantusPool.resolveBuyUrl(s);
+        });
+      } catch (_) {}
       if (window.QuantusMinerViz) {
         QuantusMinerViz.mount(document.getElementById('miner-viz-mount'), { hero: true, pollMs: 4000 });
       }

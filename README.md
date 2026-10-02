@@ -1,8 +1,10 @@
-# Quantus Pool Site (pre-token)
+# Quantus Pool on Arc (pre-token)
 
-Live-ready Node/Express + SQLite mining pool frontend for Quantus one-click miners.
+Live-ready Node/Express + SQLite mining pool frontend for the **Quantus Pool on Arc** product (Arc / Argus — **Arc QTC ≠ L1 Quantus**).
 
-Miners register a wallet, **download the Windows package openly (no paywall)**, report hashrate, and see **provisional** shares. **Buying / holding the Argus token only increases pool share %** (proportional hold) — it is never required to mine. All QTC from the one-click miner still lands in the **operator wormhole** until claims open.
+Miners register a wallet, **download the Windows package openly (no paywall)**, report hashrate, and see **provisional** shares. **Buying / holding Arc QTC on Argus only increases pool share %** (proportional hold) — it is never required to mine. All mined QTC from the one-click miner still lands in the **operator wormhole** until claims open.
+
+**Buy QTC** CTA links to `https://argus.world/token/<TOKEN_ADDRESS>` and stays **hidden** until `TOKEN_ADDRESS` (or `ARGUS_TOKEN_URL`) is set on Render.
 
 **Not a browser GPU miner.** The animated “Pool miner” panel is a status visualization only.
 
@@ -35,9 +37,19 @@ Dev with auto-reload (Node 18+ / **20.x recommended** for Render):
 npm run dev
 ```
 
+## Active hashrate & connected miners
+
+`GET /api/pool/stats` → `totalHashrate` = sum of `last_hashrate` for miners whose `last_heartbeat_at` is within `CONNECTED_WINDOW_MINUTES` (default 15). `connectedCount` is that same set.
+
+**Operator seed (default on):** on boot, `SEED_OPERATOR_MINER=true` upserts miner `operator-seed-001` with `SEED_OPERATOR_HASHRATE` (default **125 MH/s = 125000000 H/s**) and refreshes its heartbeat every `SEED_OPERATOR_TOUCH_MS` so the homepage never shows 0 H/s on a fresh Render disk.
+
+**Real miners:** `POST /api/miners/register` then `POST /api/miners/heartbeat` with `{ minerId, hashrate, shares }` + `X-Api-Key`. Their hashrate **sums with** the seed while heartbeats stay fresh. Set `SEED_OPERATOR_MINER=false` once you only want live rigs.
+
+**Connected share boost:** wallets with a fresh heartbeat get `CONNECTED_MULTIPLIER` (default 1.5×) on pool share weight.
+
 ## Pool share economics
 
-Share of provisional pool rewards is based on **Argus token** holdings (optional), with a boost for wallets that stay connected to the pool. Holdings never gate download.
+Share of provisional pool rewards is based on **Arc QTC (Argus)** holdings (optional), with a boost for wallets that stay connected to the pool. Holdings never gate download. Arc QTC ≠ L1 Quantus.
 
 ### Formula
 
@@ -66,7 +78,8 @@ Share of provisional pool rewards is based on **Argus token** holdings (optional
 | `DOWNLOAD_SECRET` | `dev-only-change-me` | Change in production |
 | `DOWNLOAD_TTL_SECONDS` | `300` | Signed download URL lifetime |
 | `RELEASE_ZIP_PATH` | `./public/releases/…` | Miner zip (served via signed URL) |
-| `TOKEN_ADDRESS` | _(empty)_ | Argus ERC-20 CA — empty = pre-launch stub |
+| `TOKEN_ADDRESS` | _(empty)_ | Arc / Argus ERC-20 CA — empty = hide Buy QTC + stub balances |
+| `ARGUS_TOKEN_URL` | _(empty)_ | Optional full Buy URL; default `https://argus.world/token/<TOKEN_ADDRESS>` |
 | `TOKEN_CHAIN_RPC` | _(empty)_ | RPC for `balanceOf` when CA set |
 | `MIN_HOLD` | `1` | Min token balance for **share eligibility** (not download) |
 | `PRE_TOKEN_OPEN_DOWNLOAD` | `true` | **Deprecated** — download is always open |
@@ -82,16 +95,25 @@ Share of provisional pool rewards is based on **Argus token** holdings (optional
 | `QUANTUS_POLL_MS` | `4000` | Server poll interval for chain tip |
 | `CORS_ORIGIN` | _(blank)_ | Optional fixed CORS origin |
 | `NODE_VERSION` | `20.19.2` | Render / engines — pin 20.x (better-sqlite3@11) |
+| `SEED_OPERATOR_MINER` | `true` | Bootstrap house rig so Active hashrate ≠ 0 |
+| `SEED_OPERATOR_HASHRATE` | `125000000` | Seed hashrate in H/s (125 MH/s) |
+| `SEED_OPERATOR_LABEL` | `operator-rig` | Label on seeded miner |
+| `SEED_OPERATOR_MINER_ID` | `operator-seed-001` | Stable seed miner id |
+| `SEED_OPERATOR_WALLET` | wormhole | Defaults to `OPERATOR_WORMHOLE` |
+| `SEED_OPERATOR_TOUCH_MS` | `60000` | Refresh seed heartbeat interval |
 
 ### At token launch (operator checklist)
 
-1. Set `TOKEN_ADDRESS` to the Argus contract address (share weights only).
-2. Set `TOKEN_CHAIN_RPC` to a working EVM RPC.
-3. Set `MIN_HOLD` for share eligibility (download stays open).
-4. When attribution is ready, set `CLAIMS_OPEN=true`.
-5. Live mainnet blocks already poll `QUANTUS_GRAPHQL_URL`; set `pool_meta.recent_accrual_qtc` for real reward estimates.
+1. Set `TOKEN_ADDRESS` to the Arc / Argus contract address (share weights + **enables Buy QTC** → Argus).
+2. Optionally set `ARGUS_TOKEN_URL` if the Argus page needs a non-default URL.
+3. Set `TOKEN_CHAIN_RPC` to a working Arc EVM RPC.
+4. Set `MIN_HOLD` for share eligibility (download stays open).
+5. When attribution is ready, set `CLAIMS_OPEN=true`.
+6. Live Quantus mainnet blocks already poll `QUANTUS_GRAPHQL_URL`; set `pool_meta.recent_accrual_qtc` for real reward estimates.
 
-**Do not mint any token from this repo.** Token integration only reads `balanceOf` for share %.
+**Do not mint / launch any token from this repo.** Token integration only reads `balanceOf` for share % and links Buy QTC to Argus.
+
+**Branding:** UI title / nav / footer = **Quantus Pool on Arc**. Disclaimer: Arc QTC ≠ L1 Quantus.
 
 ## API
 
@@ -100,7 +122,7 @@ Share of provisional pool rewards is based on **Argus token** holdings (optional
 | `POST` | `/api/miners/register` | `{ walletAddress, minerLabel? }` → `minerId` + `apiKey` |
 | `POST` | `/api/miners/heartbeat` | `X-Api-Key` + `{ minerId, hashrate, shares? }` |
 | `GET` | `/api/miners/:id/stats` | Provisional ledger |
-| `GET` | `/api/pool/stats` | Hashrate, **`chainHeight`**, **`chainLive`**, `recentBlocks[]`, **`qtcPriceUsd`**, **`coingeckoUrl`**, claims flags |
+| `GET` | `/api/pool/stats` | Hashrate, **`chainHeight`**, **`chainLive`**, `recentBlocks[]`, **`qtcPriceUsd`**, **`coingeckoUrl`**, **`buyUrl`**, `tokenConfigured`, claims flags |
 | `GET` | `/api/rewards/estimate?address=…` | Or `?minerId=…` → `{ weight, sharePct, estQtc, estUsd, connected, … }` |
 | `POST` | `/api/paywall/check` | Balance helper for share % (download never gated) |
 | `GET` | `/api/download/url` | Signed one-shot path — **always open** |

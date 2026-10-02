@@ -18,6 +18,8 @@ services:
         value: "false"
       - key: TOKEN_ADDRESS
         value: ""
+      - key: ARGUS_TOKEN_URL
+        value: ""
       - key: MIN_HOLD
         value: "1"
       - key: CONNECTED_MULTIPLIER
@@ -28,6 +30,16 @@ services:
         value: "1"
       - key: DEMO_POOL_ACCRUAL_QTC
         value: "10"
+      - key: SEED_OPERATOR_MINER
+        value: "true"
+      - key: SEED_OPERATOR_HASHRATE
+        value: "125000000"
+      - key: SEED_OPERATOR_LABEL
+        value: operator-rig
+      - key: SEED_OPERATOR_MINER_ID
+        value: operator-seed-001
+      - key: SEED_OPERATOR_TOUCH_MS
+        value: "60000"
       - key: COINGECKO_ID
         value: quantus
       - key: COINGECKO_URL

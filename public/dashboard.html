@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard — Quantus Pool</title>
+  <title>Dashboard — Quantus Pool on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -15,13 +15,14 @@
     <div class="wrap nav">
       <a class="brand" href="/">
         <span class="qmark" aria-hidden="true">Q</span>
-        Quantus Pool
+        Quantus Pool on Arc
       </a>
       <nav class="nav-links">
         <a href="/">Home</a>
         <a class="active" href="/dashboard">Dashboard</a>
         <a href="/download">Download</a>
         <a href="/claims">Claims</a>
+        <a class="btn btn-buy btn-sm" data-buy-qtc hidden href="#">Buy QTC</a>
       </nav>
     </div>
   </header>
@@ -33,6 +34,10 @@
         Register a wallet, store your API key, and watch provisional shares.
         Hash still credits the operator wormhole until claims open.
       </p>
+      <aside class="disclosure disclosure-arc" role="note">
+        <strong>⚠ Arc QTC ≠ L1 Quantus</strong>
+        <p><b>Quantus Pool on Arc</b> is an Arc / Argus pool product. Arc QTC ≠ L1 Quantus coin.</p>
+      </aside>
       <aside class="disclosure" role="note">
         <strong>⚠ Provisional only</strong>
         <p>Hashrate and shares here are a pool ledger. QTC lands at the operator wormhole until <code>CLAIMS_OPEN</code>.</p>
@@ -188,8 +193,8 @@
 
   <footer>
     <div class="wrap foot">
-      <div>Quantus Pool · dashboard</div>
-      <div><a href="/claims">Claims status</a> · <a href="/download">Download</a></div>
+      <div>Quantus Pool on Arc · dashboard · Arc QTC ≠ L1 Quantus</div>
+      <div><a href="/claims">Claims status</a> · <a href="/download">Download</a> · <a data-buy-qtc hidden href="#">Buy QTC</a></div>
     </div>
   </footer>
 
@@ -363,6 +368,7 @@
     };
 
     QuantusMinerViz.mount(document.getElementById('miner-viz-mount'), { compact: true });
+    QuantusPool.refreshBuyCtas();
     loadPoolDash();
     loadMine();
   </script>

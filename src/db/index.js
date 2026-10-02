@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const config = require('../config');
+const { ensureOperatorSeed } = require('../services/operatorSeed');
 
 let db;
 
@@ -87,6 +88,7 @@ function migrate(database) {
   insertMeta.run('recent_accrual_qtc', String(config.demoPoolAccrualQtc));
 
   seedDemoBlocks(database);
+  ensureOperatorSeed(database);
 }
 
 /** Seed placeholder blocks so the visual has something to show pre-indexer. */

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Download — Quantus Pool</title>
+  <title>Download — Quantus Pool on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -14,13 +14,14 @@
     <div class="wrap nav">
       <a class="brand" href="/">
         <span class="qmark" aria-hidden="true">Q</span>
-        Quantus Pool
+        Quantus Pool on Arc
       </a>
       <nav class="nav-links">
         <a href="/">Home</a>
         <a href="/dashboard">Dashboard</a>
         <a class="active" href="/download">Download</a>
         <a href="/claims">Claims</a>
+        <a class="btn btn-buy btn-sm" data-buy-qtc hidden href="#">Buy QTC</a>
       </nav>
     </div>
   </header>
@@ -30,8 +31,9 @@
       <h1>Download Windows miner</h1>
       <p class="lede">
         <b>Open download — no paywall.</b> Anyone can grab the one-click miner.
-        Buying / holding the Argus token does <b>not</b> unlock the download; it only
+        Buying / holding <b>Arc QTC</b> on Argus does <b>not</b> unlock the download; it only
         increases your <b>pool share %</b> (proportional to holdings) once you register.
+        Arc QTC ≠ L1 Quantus.
       </p>
       <aside class="disclosure" role="note">
         <strong>⚠ Rewards disclosure</strong>
@@ -60,7 +62,7 @@
       <h3>Token = pool share only</h3>
       <ul style="margin:0.75rem 0 0 1.1rem;color:var(--muted)">
         <li><b>Mine freely</b> — download and run without buying anything.</li>
-        <li><b>Buy / hold Argus</b> → eligible for a share of provisional pool rewards proportional to your balance (and a boost if your miner stays connected).</li>
+        <li><b>Buy / hold Arc QTC</b> (Argus) → eligible for a share of provisional pool rewards proportional to your balance (and a boost if your miner stays connected). Arc QTC ≠ L1 Quantus.</li>
         <li>More tokens held → larger share %. Below <code>MIN_HOLD</code> → 0% share (you can still mine).</li>
         <li>Check your % on the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a> after registering a wallet.</li>
       </ul>
@@ -69,8 +71,8 @@
 
   <footer>
     <div class="wrap foot">
-      <div>Quantus Pool · open download</div>
-      <div><a href="/dashboard">Register miner</a></div>
+      <div>Quantus Pool on Arc · open download · Arc QTC ≠ L1 Quantus</div>
+      <div><a href="/dashboard">Register miner</a> · <a data-buy-qtc hidden href="#">Buy QTC</a></div>
     </div>
   </footer>
 
@@ -107,6 +109,7 @@
     });
 
     refreshHealth();
+    QuantusPool.refreshBuyCtas();
   </script>
 </body>
 </html>

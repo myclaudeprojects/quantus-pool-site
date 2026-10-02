@@ -13,10 +13,12 @@ const downloadRouter = require('./routes/download');
 const claimsRouter = require('./routes/claims');
 const rewardsRouter = require('./routes/rewards');
 const { startChainPoller } = require('./services/chain');
+const { startOperatorSeedKeepalive } = require('./services/operatorSeed');
 
 // Init DB on boot
 getDb();
 startChainPoller();
+startOperatorSeedKeepalive(getDb);
 
 const app = express();
 
@@ -32,8 +34,12 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     service: 'quantus-pool-site',
+    siteName: config.siteName,
     claimsOpen: config.claimsOpen,
     tokenConfigured: Boolean(config.tokenAddress),
+    tokenAddress: config.tokenAddress || null,
+    buyUrl: config.argusTokenUrl || null,
+    argusTokenUrl: config.argusTokenUrl || null,
     openDownload: true,
     preTokenOpenDownload: true,
     tokenAffects: 'pool_share_only',
@@ -80,10 +86,12 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(config.port, config.host, () => {
-  console.log(`Quantus pool site listening on http://${config.host}:${config.port}`);
+  console.log(`${config.siteName} listening on http://${config.host}:${config.port}`);
   console.log(`  CLAIMS_OPEN=${config.claimsOpen}`);
   console.log(`  OPEN_DOWNLOAD=true (token holdings → pool share % only)`);
   console.log(`  TOKEN_ADDRESS=${config.tokenAddress || '(empty — pre-launch)'}`);
+  console.log(`  BUY_URL=${config.argusTokenUrl || '(hidden until TOKEN_ADDRESS / ARGUS_TOKEN_URL)'}`);
+  console.log(`  SEED_OPERATOR_MINER=${config.seedOperatorMiner} hashrate=${config.seedOperatorHashrate}`);
   console.log(`  OPERATOR_WORMHOLE=${config.operatorWormhole}`);
   console.log(`  DB=${config.databasePath}`);
 });

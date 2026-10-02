@@ -51,6 +51,55 @@
     return v.toFixed(2) + ' H/s';
   }
 
+  /**
+   * Resolve Argus Buy QTC URL from /api/health or /api/pool/stats.
+   * Prefer buyUrl / argusTokenUrl; hide CTAs when empty (TOKEN_ADDRESS unset).
+   */
+  function resolveBuyUrl(cfg) {
+    if (!cfg) return null;
+    const url = (cfg.buyUrl || cfg.argusTokenUrl || '').trim();
+    if (!url) return null;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+      return u.href;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Show/hide [data-buy-qtc] anchors. Hidden until TOKEN_ADDRESS (or ARGUS_TOKEN_URL) is set. */
+  function wireBuyCtas(cfg) {
+    const url = resolveBuyUrl(cfg);
+    document.querySelectorAll('[data-buy-qtc]').forEach((el) => {
+      if (!url) {
+        el.hidden = true;
+        el.removeAttribute('href');
+        el.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      el.hidden = false;
+      el.removeAttribute('aria-hidden');
+      el.href = url;
+      el.target = '_blank';
+      el.rel = 'noopener';
+    });
+    document.querySelectorAll('[data-buy-qtc-sep]').forEach((el) => {
+      el.hidden = !url;
+    });
+    return url;
+  }
+
+  async function refreshBuyCtas() {
+    try {
+      const h = await api('/api/health');
+      return wireBuyCtas(h);
+    } catch {
+      wireBuyCtas(null);
+      return null;
+    }
+  }
+
   global.QuantusPool = {
     api,
     saveMiner,
@@ -58,6 +107,10 @@
     clearMiner,
     shortAddr,
     formatHashrate,
+    resolveBuyUrl,
+    wireBuyCtas,
+    refreshBuyCtas,
     OPERATOR_WORMHOLE: 'qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ',
+    SITE_NAME: 'Quantus Pool on Arc',
   };
 })(window);

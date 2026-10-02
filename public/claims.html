@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Claims — Quantus Pool</title>
+  <title>Claims — Quantus Pool on Arc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -14,13 +14,14 @@
     <div class="wrap nav">
       <a class="brand" href="/">
         <span class="qmark" aria-hidden="true">Q</span>
-        Quantus Pool
+        Quantus Pool on Arc
       </a>
       <nav class="nav-links">
         <a href="/">Home</a>
         <a href="/dashboard">Dashboard</a>
         <a href="/download">Download</a>
         <a class="active" href="/claims">Claims</a>
+        <a class="btn btn-buy btn-sm" data-buy-qtc hidden href="#">Buy QTC</a>
       </nav>
     </div>
   </header>
@@ -62,13 +63,14 @@
 
   <footer>
     <div class="wrap foot">
-      <div>Quantus Pool · claims</div>
-      <div><a href="/dashboard">Dashboard</a></div>
+      <div>Quantus Pool on Arc · claims · Arc QTC ≠ L1 Quantus</div>
+      <div><a href="/dashboard">Dashboard</a> · <a data-buy-qtc hidden href="#">Buy QTC</a></div>
     </div>
   </footer>
 
   <script src="/js/api.js"></script>
   <script>
+    QuantusPool.refreshBuyCtas();
     (async function () {
       const panel = document.getElementById('claims-panel');
       const reason = document.getElementById('claims-reason');

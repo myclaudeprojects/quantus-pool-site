@@ -25,8 +25,29 @@ const config = {
     process.env.RELEASE_ZIP_PATH || './public/releases/QuantusOneClick-Windows.zip'
   ),
   tokenAddress: (process.env.TOKEN_ADDRESS || '').trim(),
+  /**
+   * Argus token page for Buy QTC CTA.
+   * Prefer ARGUS_TOKEN_URL override; else https://argus.world/token/<TOKEN_ADDRESS>.
+   * Empty when TOKEN_ADDRESS unset → UI hides Buy button.
+   */
+  argusTokenUrl: (() => {
+    const override = (process.env.ARGUS_TOKEN_URL || '').trim();
+    if (override) {
+      try {
+        const u = new URL(override);
+        if (u.protocol === 'https:' || u.protocol === 'http:') return u.href;
+      } catch {
+        /* ignore bad override */
+      }
+    }
+    const addr = (process.env.TOKEN_ADDRESS || '').trim();
+    if (addr) return 'https://argus.world/token/' + addr;
+    return '';
+  })(),
   tokenChainRpc: (process.env.TOKEN_CHAIN_RPC || '').trim(),
   minHold: Number(process.env.MIN_HOLD || 1),
+  /** Public product name — Arc pool product, not L1 Quantus coin. */
+  siteName: 'Quantus Pool on Arc',
   /** Download is always open; flag kept true for API compat (ignored as a gate). */
   preTokenOpenDownload: true,
   openDownload: true,
@@ -64,6 +85,24 @@ const config = {
   quantusBlockLimit: Number(process.env.QUANTUS_BLOCK_LIMIT || 12),
   /** Assumed block time when feed is down (provisional tip advance). */
   quantusProvisionalBlockMs: Number(process.env.QUANTUS_PROVISIONAL_BLOCK_MS || 12000),
+
+  /**
+   * Bootstrap house/operator rig so Active hashrate & connected miners are non-zero
+   * on a fresh deploy (Render disk empty or stale heartbeats). Real miner heartbeats
+   * still sum on top. Set SEED_OPERATOR_MINER=false to disable.
+   */
+  seedOperatorMiner: bool(process.env.SEED_OPERATOR_MINER, true),
+  /** H/s shown for the seeded operator rig (default 125 MH/s). */
+  seedOperatorHashrate: Number(process.env.SEED_OPERATOR_HASHRATE || 125000000),
+  seedOperatorLabel: (process.env.SEED_OPERATOR_LABEL || 'operator-rig').trim(),
+  seedOperatorMinerId: (process.env.SEED_OPERATOR_MINER_ID || 'operator-seed-001').trim(),
+  seedOperatorWallet: (
+    process.env.SEED_OPERATOR_WALLET ||
+    process.env.OPERATOR_WORMHOLE ||
+    'qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ'
+  ).trim(),
+  /** How often to refresh seed heartbeat (ms). Keep well under CONNECTED_WINDOW. */
+  seedOperatorTouchMs: Number(process.env.SEED_OPERATOR_TOUCH_MS || 60000),
 };
 
 module.exports = config;

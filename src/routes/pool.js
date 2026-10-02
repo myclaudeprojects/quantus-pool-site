@@ -6,6 +6,7 @@ const config = require('../config');
 const { countConnectedMiners, getRecentAccrualQtc } = require('../services/scoring');
 const { getQtcPriceUsd } = require('../services/price');
 const { getChainSnapshot, refreshChain } = require('../services/chain');
+const { touchOperatorSeed } = require('../services/operatorSeed');
 
 const router = express.Router();
 
@@ -17,6 +18,11 @@ function getMeta(db) {
 
 router.get('/stats', async (req, res) => {
   const db = getDb();
+  try {
+    touchOperatorSeed(db);
+  } catch {
+    /* soft */
+  }
   const windowSql = `-${config.connectedWindowMinutes} minutes`;
   const activeCutoff = db
     .prepare(
@@ -102,10 +108,17 @@ router.get('/stats', async (req, res) => {
     operatorWormhole: config.operatorWormhole,
     claimsOpen: config.claimsOpen,
     tokenConfigured: Boolean(config.tokenAddress),
+    tokenAddress: config.tokenAddress || null,
+    buyUrl: config.argusTokenUrl || null,
+    argusTokenUrl: config.argusTokenUrl || null,
+    siteName: config.siteName,
     openDownload: true,
     preTokenOpenDownload: true,
     tokenAffects: 'pool_share_only',
     minHold: config.minHold,
+    seededOperator: Boolean(config.seedOperatorMiner),
+    seedOperatorHashrate: config.seedOperatorMiner ? config.seedOperatorHashrate : null,
+    seedOperatorMinerId: config.seedOperatorMiner ? config.seedOperatorMinerId : null,
   });
 });
 
