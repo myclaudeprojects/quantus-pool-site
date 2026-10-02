@@ -91,7 +91,7 @@ app.listen(config.port, config.host, () => {
   console.log(`  OPEN_DOWNLOAD=true (token holdings → pool share % only)`);
   console.log(`  TOKEN_ADDRESS=${config.tokenAddress || '(empty — pre-launch)'}`);
   console.log(`  BUY_URL=${config.argusTokenUrl || '(hidden until TOKEN_ADDRESS / ARGUS_TOKEN_URL)'}`);
-  console.log(`  SEED_OPERATOR_MINER=${config.seedOperatorMiner} hashrate=${config.seedOperatorHashrate}`);
+  console.log(`  SEED_OPERATOR_MINER=${config.seedOperatorMiner} OPERATOR_HASHRATE_HS=${config.operatorHashrateHs} METRICS=${config.operatorMetricsUrl || '(none)'}`);
   console.log(`  OPERATOR_WORMHOLE=${config.operatorWormhole}`);
   console.log(`  DB=${config.databasePath}`);
 });

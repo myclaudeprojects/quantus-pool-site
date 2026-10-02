@@ -39,11 +39,15 @@ npm run dev
 
 ## Active hashrate & connected miners
 
-`GET /api/pool/stats` → `totalHashrate` = sum of `last_hashrate` for miners whose `last_heartbeat_at` is within `CONNECTED_WINDOW_MINUTES` (default 15). `connectedCount` is that same set.
+`GET /api/pool/stats` → `totalHashrate` = **operator real H/s** + sum of `last_hashrate` for *other* miners whose `last_heartbeat_at` is within `CONNECTED_WINDOW_MINUTES` (default 15). `connectedCount` is that same connected set (including the operator row when active).
 
-**Operator seed (default on):** on boot, `SEED_OPERATOR_MINER=true` upserts miner `operator-seed-001` with `SEED_OPERATOR_HASHRATE` (default **125 MH/s = 125000000 H/s**) and refreshes its heartbeat every `SEED_OPERATOR_TOUCH_MS` so the homepage never shows 0 H/s on a fresh Render disk.
+**Operator hashrate must be REAL — no fake defaults.**
 
-**Real miners:** `POST /api/miners/register` then `POST /api/miners/heartbeat` with `{ minerId, hashrate, shares }` + `X-Api-Key`. Their hashrate **sums with** the seed while heartbeats stay fresh. Set `SEED_OPERATOR_MINER=false` once you only want live rigs.
+1. Prefer live Quantus miner Prometheus: `GET http://<rig>:9900/metrics` → gauge `miner_hash_rate` (H/s). Set `OPERATOR_METRICS_URL` when the pool server can reach it, and/or bake `OPERATOR_HASHRATE_HS` from a probe.
+2. Quantus Hasura (`https://sub2.quantus.com/v1/graphql`) does **not** expose per-miner hashrate. The operator wormhole is a reward destination, not a hashrate identity.
+3. If neither `OPERATOR_HASHRATE_HS` nor a successful metrics probe yields H/s > 0, the operator contributes **0** (homepage may show only connected external miners).
+
+**Other miners:** `POST /api/miners/register` then `POST /api/miners/heartbeat` with `{ minerId, hashrate, shares }` + `X-Api-Key`. Their hashrate **adds on top of** the operator while heartbeats stay fresh. Set `SEED_OPERATOR_MINER=false` to omit the operator row.
 
 **Mining gate:** wallets without a fresh heartbeat get weight = 0 (holders who don’t mine get 0% of the pot). Legacy `CONNECTED_MULTIPLIER` is not applied as a boost.
 
@@ -125,12 +129,13 @@ API: `GET /api/rewards/formula`, `GET /api/rewards/curve`.
 | `QUANTUS_POLL_MS` | `4000` | Server poll interval for chain tip |
 | `CORS_ORIGIN` | _(blank)_ | Optional fixed CORS origin |
 | `NODE_VERSION` | `20.19.2` | Render / engines — pin 20.x (better-sqlite3@11) |
-| `SEED_OPERATOR_MINER` | `true` | Bootstrap house rig so Active hashrate ≠ 0 |
-| `SEED_OPERATOR_HASHRATE` | `125000000` | Seed hashrate in H/s (125 MH/s) |
-| `SEED_OPERATOR_LABEL` | `operator-rig` | Label on seeded miner |
-| `SEED_OPERATOR_MINER_ID` | `operator-seed-001` | Stable seed miner id |
+| `SEED_OPERATOR_MINER` | `true` | Include operator rig row in pool hashrate sum |
+| `OPERATOR_HASHRATE_HS` | _(empty / 0)_ | **Real** operator H/s from live probe (`miner_hash_rate`) — **no fake default** |
+| `OPERATOR_METRICS_URL` | _(empty)_ | Optional Prometheus `/metrics` URL to poll `miner_hash_rate` |
+| `SEED_OPERATOR_LABEL` | `operator-rig` | Label on operator miner |
+| `SEED_OPERATOR_MINER_ID` | `operator-seed-001` | Stable operator miner id |
 | `SEED_OPERATOR_WALLET` | wormhole | Defaults to `OPERATOR_WORMHOLE` |
-| `SEED_OPERATOR_TOUCH_MS` | `60000` | Refresh seed heartbeat interval |
+| `SEED_OPERATOR_TOUCH_MS` | `60000` | Refresh operator heartbeat interval |
 
 ### At token launch (operator checklist)
 

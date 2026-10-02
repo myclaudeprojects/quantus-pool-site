@@ -93,13 +93,26 @@ const config = {
   quantusProvisionalBlockMs: Number(process.env.QUANTUS_PROVISIONAL_BLOCK_MS || 12000),
 
   /**
-   * Bootstrap house/operator rig so Active hashrate & connected miners are non-zero
-   * on a fresh deploy (Render disk empty or stale heartbeats). Real miner heartbeats
-   * still sum on top. Set SEED_OPERATOR_MINER=false to disable.
+   * Operator (house) rig — REAL hashrate only (no fake MH/s defaults).
+   * totalHashrate = operator_real + sum(connected miners with fresh heartbeats).
+   * Set SEED_OPERATOR_MINER=false to omit the operator row entirely.
    */
   seedOperatorMiner: bool(process.env.SEED_OPERATOR_MINER, true),
-  /** H/s shown for the seeded operator rig (default 125 MH/s). */
-  seedOperatorHashrate: Number(process.env.SEED_OPERATOR_HASHRATE || 125000000),
+  /**
+   * Real operator H/s from a live probe of quantus-miner Prometheus
+   * (GET /metrics → miner_hash_rate). No invented default — 0 means unused.
+   * Legacy SEED_OPERATOR_HASHRATE is accepted only if OPERATOR_HASHRATE_HS unset,
+   * but must still be an explicit env value (code default is 0, not 125e6).
+   */
+  operatorHashrateHs: Number(
+    process.env.OPERATOR_HASHRATE_HS ||
+      process.env.SEED_OPERATOR_HASHRATE ||
+      0
+  ),
+  /** Optional Prometheus metrics URL (e.g. http://host:9900/metrics). Polled when set. */
+  operatorMetricsUrl: (process.env.OPERATOR_METRICS_URL || '').trim(),
+  operatorMetricsTimeoutMs: Number(process.env.OPERATOR_METRICS_TIMEOUT_MS || 5000),
+  operatorMetricsPollMs: Number(process.env.OPERATOR_METRICS_POLL_MS || 60000),
   seedOperatorLabel: (process.env.SEED_OPERATOR_LABEL || 'operator-rig').trim(),
   seedOperatorMinerId: (process.env.SEED_OPERATOR_MINER_ID || 'operator-seed-001').trim(),
   seedOperatorWallet: (
@@ -107,7 +120,7 @@ const config = {
     process.env.OPERATOR_WORMHOLE ||
     'qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ'
   ).trim(),
-  /** How often to refresh seed heartbeat (ms). Keep well under CONNECTED_WINDOW. */
+  /** How often to refresh operator heartbeat (ms). Keep well under CONNECTED_WINDOW. */
   seedOperatorTouchMs: Number(process.env.SEED_OPERATOR_TOUCH_MS || 60000),
 
   /**

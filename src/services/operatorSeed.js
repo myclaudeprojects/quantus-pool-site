@@ -1,15 +1,22 @@
 'use strict';
 
 /**
- * Bootstrap + keepalive for the house/operator mining rig.
+ * Operator (house) mining rig hashrate — REAL only.
  *
- * Active hashrate on /api/pool/stats is SUM(last_hashrate) for miners with a
- * heartbeat inside CONNECTED_WINDOW_MINUTES. Without any fresh heartbeats the
- * homepage shows 0 H/s. This module ensures a documented operator seed miner
- * stays connected so the pool never looks dead on a fresh Render disk.
+ * Active hashrate on /api/pool/stats =
+ *   operator_real_H/s  +  Σ last_hashrate of other miners with fresh heartbeats
  *
- * Real miners POST /api/miners/heartbeat — their hashrates sum with the seed.
- * Set SEED_OPERATOR_MINER=false to disable.
+ * Sources (first match wins, no invented defaults):
+ *   1. OPERATOR_METRICS_URL  → GET Prometheus text, parse miner_hash_rate
+ *   2. OPERATOR_HASHRATE_HS  → explicit H/s from a live probe of the Quantus rig
+ *
+ * Hasura / sub2.quantus.com does NOT expose per-miner hashrate (verified).
+ * Wormhole address is reward destination only — not a miner identity with H/s.
+ *
+ * If neither source yields H/s > 0, the operator row is not kept "fresh" and
+ * contributes 0. Set OPERATOR_HASHRATE_HS from:
+ *   curl -s http://127.0.0.1:9900/metrics | grep '^miner_hash_rate '
+ * on the machine running quantus-miner.
  */
 
 const { sha256 } = require('./crypto');
@@ -17,11 +24,138 @@ const config = require('../config');
 
 const SEED_API_KEY_PLACEHOLDER = 'seed-operator-not-for-client-use';
 
+/** Last resolved operator H/s + provenance (for /api/pool/stats). */
+let lastResolution = {
+  hashrate: 0,
+  source: 'none',
+  detail: null,
+  fetchedAt: null,
+  error: null,
+};
+
+function getOperatorHashrateResolution() {
+  return { ...lastResolution };
+}
+
+/**
+ * Parse Prometheus exposition for miner_hash_rate gauge.
+ * @param {string} text
+ * @returns {number|null}
+ */
+function parseMinerHashRate(text) {
+  if (!text || typeof text !== 'string') return null;
+  const m = text.match(/^miner_hash_rate(?:\{[^}]*\})?\s+([0-9]+(?:\.[0-9]+)?)\s*$/m);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+async function fetchMetricsHashrate(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), config.operatorMetricsTimeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'text/plain,*/*' },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`metrics_http_${res.status}`);
+    const text = await res.text();
+    const hs = parseMinerHashRate(text);
+    if (hs == null) throw new Error('miner_hash_rate_not_found');
+    return hs;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/**
+ * Resolve operator H/s. Sync path uses env; async refresh may use metrics URL.
+ * Never invents a default MH/s.
+ */
+function resolveOperatorHashrateSync() {
+  const fromEnv = Number(config.operatorHashrateHs);
+  if (Number.isFinite(fromEnv) && fromEnv > 0) {
+    lastResolution = {
+      hashrate: fromEnv,
+      source: 'OPERATOR_HASHRATE_HS',
+      detail: 'env',
+      fetchedAt: new Date().toISOString(),
+      error: null,
+    };
+    return fromEnv;
+  }
+  // Keep prior metrics value if we had one
+  if (lastResolution.hashrate > 0 && lastResolution.source === 'OPERATOR_METRICS_URL') {
+    return lastResolution.hashrate;
+  }
+  lastResolution = {
+    hashrate: 0,
+    source: 'none',
+    detail:
+      'No OPERATOR_HASHRATE_HS and no successful metrics probe. Chain GraphQL has no miner hashrate field.',
+    fetchedAt: new Date().toISOString(),
+    error: 'missing_real_hashrate',
+  };
+  return 0;
+}
+
+async function refreshOperatorHashrateFromMetrics() {
+  const url = config.operatorMetricsUrl;
+  if (!url) return resolveOperatorHashrateSync();
+  try {
+    const hs = await fetchMetricsHashrate(url);
+    lastResolution = {
+      hashrate: hs,
+      source: 'OPERATOR_METRICS_URL',
+      detail: url,
+      fetchedAt: new Date().toISOString(),
+      error: null,
+    };
+    return hs;
+  } catch (err) {
+    const msg = err && err.name === 'AbortError' ? 'timeout' : (err && err.message) || 'fetch_failed';
+    // Fall back to env if metrics fail
+    const fromEnv = Number(config.operatorHashrateHs);
+    if (Number.isFinite(fromEnv) && fromEnv > 0) {
+      lastResolution = {
+        hashrate: fromEnv,
+        source: 'OPERATOR_HASHRATE_HS',
+        detail: `metrics_failed:${msg}; using env`,
+        fetchedAt: new Date().toISOString(),
+        error: msg,
+      };
+      return fromEnv;
+    }
+    lastResolution = {
+      hashrate: 0,
+      source: 'none',
+      detail: `metrics_failed:${msg}`,
+      fetchedAt: new Date().toISOString(),
+      error: msg,
+    };
+    return 0;
+  }
+}
+
+function currentOperatorHashrate() {
+  if (lastResolution.hashrate > 0) return lastResolution.hashrate;
+  return resolveOperatorHashrateSync();
+}
+
 function ensureOperatorSeed(database) {
   if (!config.seedOperatorMiner) return null;
 
+  const hashrate = currentOperatorHashrate();
+  // Do not invent — if we have no real H/s, skip creating a fake connected miner.
+  if (!(hashrate > 0)) {
+    console.warn(
+      '[operator-hashrate] no real H/s yet — set OPERATOR_HASHRATE_HS or OPERATOR_METRICS_URL (Quantus miner Prometheus miner_hash_rate)'
+    );
+    return null;
+  }
+
   const id = config.seedOperatorMinerId;
-  const hashrate = Number(config.seedOperatorHashrate) || 0;
   const wallet = config.seedOperatorWallet;
   const label = config.seedOperatorLabel;
   const apiKeyHash = sha256(SEED_API_KEY_PLACEHOLDER);
@@ -46,6 +180,7 @@ function ensureOperatorSeed(database) {
       walletAddress: wallet,
       label,
       created: true,
+      source: lastResolution.source,
     };
   }
 
@@ -53,14 +188,28 @@ function ensureOperatorSeed(database) {
 }
 
 /**
- * Refresh seed heartbeat only when stale (or force=true).
- * Stale = older than half of SEED_OPERATOR_TOUCH_MS / connected window floor.
+ * Refresh operator heartbeat when stale (or force=true).
+ * Uses current real hashrate resolution only.
  */
 function touchOperatorSeed(database, opts = {}) {
   if (!config.seedOperatorMiner) return null;
 
+  const hashrate = currentOperatorHashrate();
+  if (!(hashrate > 0)) {
+    // Stale/zero: clear fake leftover hashrate so pool sum is honest
+    const id = config.seedOperatorMinerId;
+    const row = database.prepare(`SELECT id, last_hashrate FROM miners WHERE id = ?`).get(id);
+    if (row && Number(row.last_hashrate) > 0) {
+      database
+        .prepare(
+          `UPDATE miners SET last_hashrate = 0, last_heartbeat_at = datetime('now', '-1 day') WHERE id = ?`
+        )
+        .run(id);
+    }
+    return null;
+  }
+
   const id = config.seedOperatorMinerId;
-  const hashrate = Number(config.seedOperatorHashrate) || 0;
   const force = Boolean(opts.force);
   const row = database
     .prepare(`SELECT id, last_heartbeat_at, last_hashrate FROM miners WHERE id = ?`)
@@ -87,6 +236,7 @@ function touchOperatorSeed(database, opts = {}) {
         walletAddress: config.seedOperatorWallet,
         label: config.seedOperatorLabel,
         skipped: true,
+        source: lastResolution.source,
       };
     }
   }
@@ -122,19 +272,36 @@ function touchOperatorSeed(database, opts = {}) {
     walletAddress: config.seedOperatorWallet,
     label: config.seedOperatorLabel,
     touched: true,
+    source: lastResolution.source,
   };
 }
 
 let touchTimer = null;
+let metricsTimer = null;
 
 function startOperatorSeedKeepalive(getDbFn) {
   if (!config.seedOperatorMiner) {
-    console.log('[operator-seed] disabled (SEED_OPERATOR_MINER=false)');
+    console.log('[operator-hashrate] disabled (SEED_OPERATOR_MINER=false)');
     return;
   }
-  const db = getDbFn();
-  ensureOperatorSeed(db);
-  touchOperatorSeed(db, { force: true });
+
+  resolveOperatorHashrateSync();
+
+  const boot = async () => {
+    await refreshOperatorHashrateFromMetrics();
+    const db = getDbFn();
+    ensureOperatorSeed(db);
+    touchOperatorSeed(db, { force: true });
+    const r = getOperatorHashrateResolution();
+    console.log(
+      `[operator-hashrate] minerId=${config.seedOperatorMinerId} hashrate=${r.hashrate} H/s (~${(
+        r.hashrate / 1e6
+      ).toFixed(3)} MH/s) source=${r.source} detail=${r.detail || '-'}`
+    );
+  };
+  boot().catch((err) => {
+    console.warn('[operator-hashrate] boot failed:', err && err.message ? err.message : err);
+  });
 
   const ms = Math.max(15000, Number(config.seedOperatorTouchMs) || 60000);
   if (touchTimer) clearInterval(touchTimer);
@@ -142,20 +309,35 @@ function startOperatorSeedKeepalive(getDbFn) {
     try {
       touchOperatorSeed(getDbFn(), { force: true });
     } catch (err) {
-      console.warn('[operator-seed] touch failed:', err && err.message ? err.message : err);
+      console.warn('[operator-hashrate] touch failed:', err && err.message ? err.message : err);
     }
   }, ms);
   if (touchTimer.unref) touchTimer.unref();
 
-  console.log(
-    `[operator-seed] active minerId=${config.seedOperatorMinerId} hashrate=${config.seedOperatorHashrate} H/s (~${(
-      config.seedOperatorHashrate / 1e6
-    ).toFixed(1)} MH/s) touch every ${ms}ms`
-  );
+  if (config.operatorMetricsUrl) {
+    const poll = Math.max(15000, Number(config.operatorMetricsPollMs) || 60000);
+    if (metricsTimer) clearInterval(metricsTimer);
+    metricsTimer = setInterval(() => {
+      refreshOperatorHashrateFromMetrics()
+        .then(() => {
+          try {
+            touchOperatorSeed(getDbFn(), { force: true });
+          } catch {
+            /* soft */
+          }
+        })
+        .catch(() => {});
+    }, poll);
+    if (metricsTimer.unref) metricsTimer.unref();
+  }
 }
 
 module.exports = {
   ensureOperatorSeed,
   touchOperatorSeed,
   startOperatorSeedKeepalive,
+  getOperatorHashrateResolution,
+  parseMinerHashRate,
+  refreshOperatorHashrateFromMetrics,
+  resolveOperatorHashrateSync,
 };

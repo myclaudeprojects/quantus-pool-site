@@ -44,8 +44,10 @@ services:
         value: "10"
       - key: SEED_OPERATOR_MINER
         value: "true"
-      - key: SEED_OPERATOR_HASHRATE
-        value: "125000000"
+      # Real H/s from live probe of quantus-miner Prometheus miner_hash_rate
+      # on operator PC (DESKTOP-A4QB2LJ :9900/metrics). Update when rig changes.
+      - key: OPERATOR_HASHRATE_HS
+        value: "9478285"
       - key: SEED_OPERATOR_LABEL
         value: operator-rig
       - key: SEED_OPERATOR_MINER_ID

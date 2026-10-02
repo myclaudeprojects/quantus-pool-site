@@ -6,7 +6,7 @@ const config = require('../config');
 const { countConnectedMiners, getTotalMinedL1Qtc, getPoolShareFormula, illustrativeExample, curveSeries } = require('../services/scoring');
 const { getQtcPriceUsd } = require('../services/price');
 const { getChainSnapshot, refreshChain } = require('../services/chain');
-const { touchOperatorSeed } = require('../services/operatorSeed');
+const { touchOperatorSeed, getOperatorHashrateResolution } = require('../services/operatorSeed');
 
 const router = express.Router();
 
@@ -122,8 +122,19 @@ router.get('/stats', async (req, res) => {
     poolShareExample: illustrativeExample({ totalMinedL1Qtc: totalMinedL1Qtc }),
     curveSeries: curveSeries(),
     seededOperator: Boolean(config.seedOperatorMiner),
-    seedOperatorHashrate: config.seedOperatorMiner ? config.seedOperatorHashrate : null,
     seedOperatorMinerId: config.seedOperatorMiner ? config.seedOperatorMinerId : null,
+    operatorHashrate: (() => {
+      const r = getOperatorHashrateResolution();
+      return {
+        hashrate: r.hashrate,
+        source: r.source,
+        detail: r.detail,
+        fetchedAt: r.fetchedAt,
+        error: r.error,
+        note:
+          'operator_real + sum(connected miners). Chain GraphQL has no hashrate; use OPERATOR_HASHRATE_HS or OPERATOR_METRICS_URL (miner_hash_rate).',
+      };
+    })(),
     /** Display-only: Arc 1B bag + L1 21M chain-max context (not claim denominator). */
     launchEconomics: {
       totalSupply: config.launchTotalSupply,
