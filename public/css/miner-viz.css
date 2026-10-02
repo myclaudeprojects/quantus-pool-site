@@ -1,0 +1,187 @@
+.miner-viz {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 106, 0, 0.18), transparent 55%),
+    var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.4rem 1.2rem;
+  position: relative;
+  overflow: hidden;
+}
+.miner-viz::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      rgba(255, 106, 0, 0.03) 11px,
+      rgba(255, 106, 0, 0.03) 12px
+    );
+  pointer-events: none;
+}
+.miner-viz-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  position: relative; z-index: 1; margin-bottom: 1rem;
+}
+.miner-viz-head h3 {
+  font-size: 0.95rem; letter-spacing: -0.02em; margin: 0;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.miner-viz-live {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--orange); background: var(--orange-dim);
+  padding: 0.3rem 0.65rem; border-radius: 999px;
+}
+.miner-viz-live .dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--orange);
+  box-shadow: 0 0 0 0 rgba(255, 106, 0, 0.55);
+  animation: viz-pulse 1.6s infinite;
+}
+@keyframes viz-pulse {
+  70% { box-shadow: 0 0 0 8px rgba(255, 106, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 106, 0, 0); }
+}
+
+.miner-viz-stage {
+  position: relative; z-index: 1;
+  height: 140px;
+  border-radius: 12px;
+  background: #0d0d0f;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.miner-viz.compact .miner-viz-stage { height: 110px; }
+
+.viz-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,106,0,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,106,0,0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.45;
+  animation: viz-grid-drift 12s linear infinite;
+}
+@keyframes viz-grid-drift {
+  from { background-position: 0 0; }
+  to { background-position: 24px 24px; }
+}
+
+.viz-core {
+  position: absolute; left: 50%; top: 50%;
+  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ff8533, #ff6a00 55%, #c2410c);
+  box-shadow:
+    0 0 0 4px rgba(255, 106, 0, 0.15),
+    0 0 40px rgba(255, 106, 0, 0.45);
+  display: grid; place-items: center;
+  color: #111; font-weight: 800; font-size: 1.35rem;
+  animation: viz-core-breathe 2.4s ease-in-out infinite;
+}
+@keyframes viz-core-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(255,106,0,0.15), 0 0 40px rgba(255,106,0,0.45); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(255,106,0,0.12), 0 0 55px rgba(255,106,0,0.6); }
+}
+
+.viz-ring {
+  position: absolute; left: 50%; top: 50%;
+  border: 1px solid rgba(255, 106, 0, 0.35);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: viz-ring-spin 6s linear infinite;
+}
+.viz-ring.r1 { width: 90px; height: 90px; border-style: dashed; animation-duration: 8s; }
+.viz-ring.r2 { width: 120px; height: 120px; opacity: 0.55; animation-direction: reverse; animation-duration: 11s; }
+@keyframes viz-ring-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.viz-hash-stream {
+  position: absolute; inset: 0; pointer-events: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem; color: rgba(255, 133, 51, 0.55);
+  overflow: hidden;
+}
+.viz-hash-stream span {
+  position: absolute;
+  white-space: nowrap;
+  animation: viz-hash-fall linear infinite;
+  opacity: 0;
+}
+@keyframes viz-hash-fall {
+  0% { transform: translateY(-10px); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.35; }
+  100% { transform: translateY(150px); opacity: 0; }
+}
+
+.viz-spark {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%;
+  background: #ffb070; box-shadow: 0 0 8px #ff6a00;
+  animation: viz-spark 1.8s ease-out infinite;
+  opacity: 0;
+}
+@keyframes viz-spark {
+  0% { transform: scale(0.4); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: scale(1) translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+.miner-viz-stats {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+@media (max-width: 560px) {
+  .miner-viz-stats { grid-template-columns: 1fr; }
+}
+.miner-viz-stat {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+}
+.miner-viz-stat .lbl {
+  font-size: 0.72rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600;
+}
+.miner-viz-stat .val {
+  font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em;
+  color: var(--orange); margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.miner-viz-stat .val.tick {
+  animation: viz-tick 0.45s ease;
+}
+@keyframes viz-tick {
+  0% { transform: scale(1.12); color: #ffb070; }
+  100% { transform: scale(1); color: var(--orange); }
+}
+.miner-viz-stat .sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+.miner-viz-blocks {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--line);
+  padding-top: 0.85rem;
+}
+.miner-viz-blocks h4 {
+  font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 0.55rem; font-weight: 600;
+}
+.miner-viz-blocks table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.miner-viz-blocks th, .miner-viz-blocks td {
+  text-align: left; padding: 0.4rem 0.35rem; border-bottom: 1px solid var(--line);
+}
+.miner-viz-blocks th {
+  color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.miner-viz-blocks .mono { font-size: 0.78rem; }
+.miner-viz-note {
+  position: relative; z-index: 1;
+  margin-top: 0.75rem;
+  font-size: 0.75rem; color: var(--muted);
+}
+.miner-viz-note b { color: var(--warn); }

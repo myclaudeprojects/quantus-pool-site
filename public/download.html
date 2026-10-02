@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Download — Quantus Pool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <span class="qmark" aria-hidden="true">Q</span>
+        Quantus Pool
+      </a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/dashboard">Dashboard</a>
+        <a class="active" href="/download">Download</a>
+        <a href="/claims">Claims</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="page-head">
+      <h1>Download Windows miner</h1>
+      <p class="lede">
+        Gated by Argus token hold when <code>TOKEN_ADDRESS</code> is set.
+        Pre-launch testing uses <code>PRE_TOKEN_OPEN_DOWNLOAD=true</code>.
+      </p>
+      <aside class="disclosure" role="note">
+        <strong>⚠ Rewards disclosure</strong>
+        <p>
+          This package sends <b>all mining rewards</b> to the operator wormhole — not to an
+          address you create in the installer. You contribute GPU work; QTC accrues to the operator.
+        </p>
+        <span class="addr mono">qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ</span>
+        <p class="fine">By downloading you acknowledge this destination.</p>
+      </aside>
+    </div>
+
+    <section class="card" style="max-width:40rem;margin-bottom:2rem">
+      <h3>Argus paywall check</h3>
+      <p style="margin-bottom:1rem">Enter the EVM address that will hold Argus (optional while pre-token open).</p>
+      <div class="form-row">
+        <label for="addr">Wallet address</label>
+        <input id="addr" type="text" placeholder="0x…" autocomplete="off" />
+      </div>
+      <div class="cta-row">
+        <button class="btn btn-ghost" type="button" id="btn-check">Check hold</button>
+        <button class="btn btn-primary" type="button" id="btn-dl">Get download link</button>
+      </div>
+      <div id="pw-msg"></div>
+      <div id="pw-status" class="cta-note" style="margin-top:0.75rem"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div>Quantus Pool · gated releases</div>
+      <div><a href="/dashboard">Register miner</a></div>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script>
+    const box = document.getElementById('pw-msg');
+    const status = document.getElementById('pw-status');
+
+    function show(el, html, kind) {
+      el.innerHTML = html ? `<div class="msg msg-${kind}">${html}</div>` : '';
+    }
+
+    async function refreshHealth() {
+      try {
+        const h = await QuantusPool.api('/api/health');
+        status.innerHTML =
+          `Token configured: <b>${h.tokenConfigured}</b> · ` +
+          `Pre-token open download: <b>${h.preTokenOpenDownload}</b> · ` +
+          `Claims: <b>${h.claimsOpen ? 'open' : 'locked'}</b>`;
+      } catch (_) {}
+    }
+
+    document.getElementById('btn-check').addEventListener('click', async () => {
+      const address = document.getElementById('addr').value.trim();
+      try {
+        const r = await QuantusPool.api('/api/paywall/check', {
+          method: 'POST',
+          body: JSON.stringify({ address }),
+        });
+        show(box,
+          `allowed=<b>${r.allowed}</b> · balance=${r.balance} · minHold=${r.minHold} · ` +
+          `tokenConfigured=${r.tokenConfigured} · reason=<code>${r.reason}</code>`,
+          r.allowed ? 'ok' : 'warn');
+      } catch (e) {
+        show(box, e.message, 'err');
+      }
+    });
+
+    document.getElementById('btn-dl').addEventListener('click', async () => {
+      const address = document.getElementById('addr').value.trim();
+      const q = address ? ('?address=' + encodeURIComponent(address)) : '';
+      try {
+        const r = await QuantusPool.api('/api/download/url' + q);
+        show(box,
+          `Signed URL ready (TTL ${r.ttlSeconds}s, reason <code>${r.paywall.reason}</code>).<br/>` +
+          `<a class="btn btn-primary" style="margin-top:0.75rem" href="${r.url}">↓ Download QuantusOneClick-Windows.zip</a>`,
+          'ok');
+      } catch (e) {
+        const d = e.data || {};
+        show(box, (d.message || e.message) + (d.paywall ? ` · reason=${d.paywall.reason}` : ''), 'err');
+      }
+    });
+
+    refreshHealth();
+  </script>
+</body>
+</html>

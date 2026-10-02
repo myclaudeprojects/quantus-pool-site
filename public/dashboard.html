@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — Quantus Pool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <link rel="stylesheet" href="/css/miner-viz.css" />
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <span class="qmark" aria-hidden="true">Q</span>
+        Quantus Pool
+      </a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a class="active" href="/dashboard">Dashboard</a>
+        <a href="/download">Download</a>
+        <a href="/claims">Claims</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="page-head">
+      <h1>Miner dashboard</h1>
+      <p class="lede" style="margin-bottom:0.75rem">
+        Register a wallet, store your API key, and watch provisional shares.
+        Hash still credits the operator wormhole until claims open.
+      </p>
+      <aside class="disclosure" role="note">
+        <strong>⚠ Provisional only</strong>
+        <p>Hashrate and shares here are a pool ledger. QTC lands at the operator wormhole until <code>CLAIMS_OPEN</code>.</p>
+        <span class="addr mono">qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ</span>
+      </aside>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:1.5rem;align-items:start">
+      <section class="card" id="register">
+        <h3>Register miner</h3>
+        <p style="margin-bottom:1rem">Creates a miner ID + one-time API key for heartbeats.</p>
+        <div class="form-row">
+          <label for="wallet">Wallet / wormhole address</label>
+          <input id="wallet" type="text" placeholder="qz… or 0x…" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="label">Miner label (optional)</label>
+          <input id="label" type="text" placeholder="rig-01" />
+        </div>
+        <button class="btn btn-primary" type="button" id="btn-register">Register</button>
+        <div id="reg-msg"></div>
+      </section>
+
+      <section>
+        <div id="miner-viz-mount"></div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-bottom:1.5rem">
+      <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">My miner</h3>
+        <div>
+          <button class="btn btn-ghost btn-sm" type="button" id="btn-refresh">Refresh</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="btn-clear">Clear saved key</button>
+        </div>
+      </div>
+      <div class="grid-3" id="my-stats">
+        <div>
+          <div class="stat-label">Hashrate</div>
+          <div class="stat-value" id="my-hashrate">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Total shares</div>
+          <div class="stat-value" id="my-shares">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Pending QTC</div>
+          <div class="stat-value" id="my-pending">—</div>
+        </div>
+      </div>
+      <p class="cta-note" id="my-meta" style="margin-top:0.75rem">No miner saved in this browser yet.</p>
+
+      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--line)">
+        <h3 style="margin-bottom:0.75rem">Send test heartbeat</h3>
+        <div class="form-row">
+          <label for="hb-hashrate">Hashrate (H/s)</label>
+          <input id="hb-hashrate" type="number" min="0" step="any" value="125000000" />
+        </div>
+        <div class="form-row">
+          <label for="hb-shares">Shares delta</label>
+          <input id="hb-shares" type="number" min="0" step="any" value="1" />
+        </div>
+        <button class="btn btn-primary" type="button" id="btn-heartbeat">Post heartbeat</button>
+        <div id="hb-msg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Time</th><th>Hashrate</th><th>Shares</th></tr>
+          </thead>
+          <tbody id="hb-table">
+            <tr><td colspan="3" style="color:var(--muted)">No heartbeats yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div>Quantus Pool · dashboard</div>
+      <div><a href="/claims">Claims status</a> · <a href="/download">Download</a></div>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/miner-viz.js"></script>
+  <script>
+    const msg = (el, text, kind) => {
+      el.innerHTML = text ? `<div class="msg msg-${kind}">${text}</div>` : '';
+    };
+
+    async function loadMine() {
+      const creds = QuantusPool.loadMiner();
+      if (!creds || !creds.minerId) {
+        document.getElementById('my-meta').textContent = 'No miner saved in this browser yet.';
+        return;
+      }
+      try {
+        const s = await QuantusPool.api('/api/miners/' + encodeURIComponent(creds.minerId) + '/stats');
+        document.getElementById('my-hashrate').textContent = QuantusPool.formatHashrate(s.hashrate);
+        document.getElementById('my-shares').textContent = Number(s.totalShares || 0).toLocaleString();
+        document.getElementById('my-pending').textContent = Number(s.pendingQtc || 0).toFixed(4);
+        document.getElementById('my-meta').innerHTML =
+          `Miner <code>${s.minerId}</code> · ${QuantusPool.shortAddr(s.walletAddress)}` +
+          (s.minerLabel ? ` · ${s.minerLabel}` : '') +
+          (s.lastHeartbeatAt ? ` · last HB ${s.lastHeartbeatAt} UTC` : '');
+        const tbody = document.getElementById('hb-table');
+        if (s.recentHeartbeats && s.recentHeartbeats.length) {
+          tbody.innerHTML = s.recentHeartbeats.map(r =>
+            `<tr><td class="mono">${r.recordedAt}</td><td>${QuantusPool.formatHashrate(r.hashrate)}</td><td>${r.shares}</td></tr>`
+          ).join('');
+        }
+      } catch (e) {
+        document.getElementById('my-meta').textContent = 'Failed to load miner: ' + e.message;
+      }
+    }
+
+    document.getElementById('btn-register').addEventListener('click', async () => {
+      const walletAddress = document.getElementById('wallet').value.trim();
+      const minerLabel = document.getElementById('label').value.trim();
+      const box = document.getElementById('reg-msg');
+      try {
+        const r = await QuantusPool.api('/api/miners/register', {
+          method: 'POST',
+          body: JSON.stringify({ walletAddress, minerLabel: minerLabel || undefined }),
+        });
+        QuantusPool.saveMiner({ minerId: r.minerId, apiKey: r.apiKey, walletAddress: r.walletAddress });
+        msg(box,
+          `Registered. Miner ID: <code>${r.minerId}</code><br/>API key (copy now):<div class="secret-box mono">${r.apiKey}</div>`,
+          'ok');
+        loadMine();
+      } catch (e) {
+        msg(box, e.message || 'Register failed', 'err');
+      }
+    });
+
+    document.getElementById('btn-heartbeat').addEventListener('click', async () => {
+      const creds = QuantusPool.loadMiner();
+      const box = document.getElementById('hb-msg');
+      if (!creds || !creds.apiKey) {
+        msg(box, 'Register first (or restore API key).', 'warn');
+        return;
+      }
+      try {
+        await QuantusPool.api('/api/miners/heartbeat', {
+          method: 'POST',
+          headers: { 'X-Api-Key': creds.apiKey },
+          body: JSON.stringify({
+            minerId: creds.minerId,
+            hashrate: Number(document.getElementById('hb-hashrate').value),
+            shares: Number(document.getElementById('hb-shares').value),
+          }),
+        });
+        msg(box, 'Heartbeat accepted.', 'ok');
+        loadMine();
+      } catch (e) {
+        msg(box, e.message || 'Heartbeat failed', 'err');
+      }
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', loadMine);
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      QuantusPool.clearMiner();
+      location.reload();
+    });
+
+    QuantusMinerViz.mount(document.getElementById('miner-viz-mount'), { compact: true });
+    loadMine();
+  </script>
+</body>
+</html>

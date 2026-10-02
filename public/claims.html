@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claims — Quantus Pool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <span class="qmark" aria-hidden="true">Q</span>
+        Quantus Pool
+      </a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/download">Download</a>
+        <a class="active" href="/claims">Claims</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="page-head">
+      <h1>Claims</h1>
+      <p class="lede">
+        Request a payout against provisional pool credit. Locked until the operator sets
+        <code>CLAIMS_OPEN=true</code> after token launch and attribution.
+      </p>
+    </div>
+
+    <div class="locked-panel" id="claims-panel">
+      <div class="lock" aria-hidden="true">🔒</div>
+      <h2>Claims locked</h2>
+      <p id="claims-reason" style="color:var(--muted);margin:0.75rem 0 1rem">Loading status…</p>
+      <p class="cta-note">
+        Mining continues to credit
+        <span class="mono" style="font-size:0.75rem;word-break:break-all">qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ</span>
+      </p>
+    </div>
+
+    <section class="card" style="max-width:40rem;margin:1.5rem auto 2rem" id="claim-form-wrap" hidden>
+      <h3>Request claim</h3>
+      <p style="margin-bottom:1rem">Requires saved miner API key from dashboard registration.</p>
+      <div class="form-row">
+        <label for="claim-wallet">Payout wallet</label>
+        <input id="claim-wallet" type="text" />
+      </div>
+      <div class="form-row">
+        <label for="claim-amount">Amount QTC</label>
+        <input id="claim-amount" type="number" min="0" step="any" />
+      </div>
+      <button class="btn btn-primary" type="button" id="btn-claim">Submit claim request</button>
+      <div id="claim-msg"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div>Quantus Pool · claims</div>
+      <div><a href="/dashboard">Dashboard</a></div>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script>
+    (async function () {
+      const panel = document.getElementById('claims-panel');
+      const reason = document.getElementById('claims-reason');
+      const formWrap = document.getElementById('claim-form-wrap');
+      try {
+        const s = await QuantusPool.api('/api/claims/status');
+        if (s.open) {
+          panel.querySelector('.lock').textContent = '✓';
+          panel.querySelector('h2').textContent = 'Claims open';
+          reason.textContent = s.reason || 'You can submit a claim request.';
+          formWrap.hidden = false;
+          const creds = QuantusPool.loadMiner();
+          if (creds && creds.walletAddress) {
+            document.getElementById('claim-wallet').value = creds.walletAddress;
+          }
+        } else {
+          reason.textContent = s.reason || 'Claims are not open yet.';
+        }
+      } catch (e) {
+        reason.textContent = 'Could not load claims status: ' + e.message;
+      }
+
+      document.getElementById('btn-claim').addEventListener('click', async () => {
+        const creds = QuantusPool.loadMiner();
+        const box = document.getElementById('claim-msg');
+        if (!creds || !creds.apiKey) {
+          box.innerHTML = '<div class="msg msg-warn">Register a miner on the dashboard first.</div>';
+          return;
+        }
+        try {
+          const r = await QuantusPool.api('/api/claims/request', {
+            method: 'POST',
+            headers: { 'X-Api-Key': creds.apiKey },
+            body: JSON.stringify({
+              walletAddress: document.getElementById('claim-wallet').value.trim(),
+              amountQtc: Number(document.getElementById('claim-amount').value),
+            }),
+          });
+          box.innerHTML = `<div class="msg msg-ok">Claim queued: <code>${r.claimId}</code> · ${r.amountQtc} QTC</div>`;
+        } catch (e) {
+          box.innerHTML = `<div class="msg msg-err">${(e.data && e.data.reason) || e.message}</div>`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

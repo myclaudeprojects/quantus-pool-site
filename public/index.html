@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantus Mining Pool — Mine QTC · Claim after launch</title>
+  <meta name="description" content="Connect your wallet, download the Windows miner (Argus hold required at launch), track provisional shares, claim after token launch." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <link rel="stylesheet" href="/css/miner-viz.css" />
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <span class="qmark" aria-hidden="true">Q</span>
+        Quantus Pool
+      </a>
+      <nav class="nav-links">
+        <a class="hide-sm" href="#how">How it works</a>
+        <a class="hide-sm" href="#rewards">Rewards</a>
+        <a class="hide-sm" href="/dashboard">Dashboard</a>
+        <a class="hide-sm" href="/claims">Claims</a>
+        <a class="btn btn-primary" href="/download">Download miner</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="wrap hero">
+      <div>
+        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> Pre-token pool · Quantus mainnet</div>
+        <h1>Mine <span>QTC</span>. Track shares. Claim after launch.</h1>
+        <p class="lede">
+          One-click Windows miner feeds the operator wormhole. This site records provisional
+          hashrate and shares for your wallet — claims unlock when the Argus token and pool
+          attribution go live.
+        </p>
+
+        <aside class="disclosure" id="rewards" role="note" aria-label="Rewards disclosure">
+          <strong>⚠ Rewards disclosure</strong>
+          <p>
+            All mining rewards from the one-click miner go to the <b>operator wormhole</b>
+            below — not to your personal address. The pool ledger shows <b>provisional</b>
+            shares only. Claims stay locked until launch (<code>CLAIMS_OPEN=false</code>).
+          </p>
+          <span class="addr mono" id="wormhole-addr">qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ</span>
+          <p class="fine">
+            By registering and mining you acknowledge this destination.
+            Self-custody mining:
+            <a href="https://docs.quantus.com/guides/mining/" style="color:var(--orange-bright)" target="_blank" rel="noopener">docs.quantus.com</a>.
+          </p>
+        </aside>
+
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="/dashboard#register">Connect / register miner</a>
+          <a class="btn btn-ghost" href="/download">Download (paywall)</a>
+        </div>
+        <p class="cta-note">
+          Windows 10/11 · NVIDIA recommended · Argus token paywall stubs until
+          <code>TOKEN_ADDRESS</code> is set · No guaranteed yield
+        </p>
+      </div>
+
+      <div class="hero-visual">
+        <img src="/img/hero.jpg" alt="Quantus GPU mining" />
+        <div class="badge-float"><b>Pool ledger</b> · provisional shares</div>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Live pool snapshot</h2>
+          <p>Aggregated from miner heartbeats. Block / balance figures are placeholders until launch wiring.</p>
+        </div>
+        <div class="grid-2" id="pool-stats">
+          <article class="card">
+            <div class="stat-label">Active hashrate</div>
+            <div class="stat-value" id="stat-hashrate">—</div>
+            <p>Miners with heartbeat in last 15 min</p>
+          </article>
+          <article class="card">
+            <div class="stat-label">Blocks mined</div>
+            <div class="stat-value" id="stat-blocks">—</div>
+            <p>Attributed / demo until indexer live</p>
+          </article>
+          <article class="card">
+            <div class="stat-label">Provisional shares</div>
+            <div class="stat-value" id="stat-shares">—</div>
+            <p>Ledger total (not spendable yet)</p>
+          </article>
+          <article class="card">
+            <div class="stat-label">Claims</div>
+            <div class="stat-value" id="stat-claims">—</div>
+            <p id="stat-claims-note">Loading…</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Pool hashing</h2>
+          <p>Status visualization — not a browser GPU miner. Block counter comes from <code>GET /api/pool/stats</code> (<code>blocksMined</code>).</p>
+        </div>
+        <div id="miner-viz-mount" style="max-width:640px"></div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>How the pool works</h2>
+          <p>Honest path from GPU to provisional credit — then claim after launch.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <h3>Register</h3>
+            <p>Submit your wallet address. You get a miner ID + API key for heartbeats from the one-click package or your own miner.</p>
+          </article>
+          <article class="step">
+            <h3>Download &amp; mine</h3>
+            <p>Pass the Argus hold check (or pre-token bypass). Installer sends hash to the operator wormhole; you report hashrate here.</p>
+          </article>
+          <article class="step">
+            <h3>Claim later</h3>
+            <p>When <code>CLAIMS_OPEN</code> flips true, request payout against your provisional credit. Locked by default today.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="wrap">
+        <div class="grid-2">
+          <article class="card">
+            <h3>Included</h3>
+            <ul>
+              <li>Miner registration + API key</li>
+              <li>Heartbeat hashrate / share ledger (SQLite)</li>
+              <li>Gated Windows one-click zip download</li>
+              <li>Argus paywall stub (live when CA is set)</li>
+              <li>Claims API schema ready, gated off</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Not claimed</h3>
+            <ul>
+              <li>No instant QTC to your wallet</li>
+              <li>No guarantee of block attribution</li>
+              <li>Token not launched — hold check is stubbed</li>
+              <li>Electricity and hardware wear are yours</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="cta-band">
+          <h2>Start with dashboard</h2>
+          <p>Register a miner, then grab the Windows package from the paywalled download page.</p>
+          <aside class="disclosure" role="note">
+            <strong>⚠ Reminder</strong>
+            <p>All QTC mined by the one-click app accrues to the operator wormhole:</p>
+            <span class="addr mono">qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ</span>
+          </aside>
+          <div class="cta-row">
+            <a class="btn btn-primary btn-lg" href="/dashboard">Open dashboard</a>
+            <a class="btn btn-ghost" href="https://docs.quantus.com/guides/mining/" target="_blank" rel="noopener">Self-custody docs</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div class="brand"><span class="qmark" style="width:24px;height:24px;font-size:0.85rem;">Q</span> Quantus Pool · pre-token</div>
+      <div>
+        <a href="/download">Download</a> ·
+        <a href="/claims">Claims</a> ·
+        <a href="#rewards">Disclosure</a> ·
+        <a href="https://docs.quantus.com/guides/mining/" target="_blank" rel="noopener">Docs</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/miner-viz.js"></script>
+  <script>
+    (async function () {
+      try {
+        const s = await QuantusPool.api('/api/pool/stats');
+        document.getElementById('stat-hashrate').textContent = QuantusPool.formatHashrate(s.totalHashrate);
+        document.getElementById('stat-blocks').textContent = Number(s.blocksMined != null ? s.blocksMined : s.blocksAttributed || 0).toLocaleString();
+        document.getElementById('stat-shares').textContent = Number(s.totalShares || 0).toLocaleString();
+        const blocks = s.blocksMined != null ? s.blocksMined : s.blocksAttributed;
+        // Prefer showing blocks in the third card if we want — keep claims status
+        document.getElementById('stat-claims').textContent = s.claimsOpen ? 'OPEN' : 'LOCKED';
+        document.getElementById('stat-claims-note').textContent = s.claimsOpen
+          ? 'CLAIMS_OPEN=true'
+          : 'CLAIMS_OPEN=false · post-launch · blocksMined=' + Number(blocks || 0).toLocaleString();
+      } catch (e) {
+        document.getElementById('stat-claims-note').textContent = 'Could not load pool stats';
+      }
+      if (window.QuantusMinerViz) {
+        QuantusMinerViz.mount(document.getElementById('miner-viz-mount'));
+      }
+    })();
+  </script>
+</body>
+</html>

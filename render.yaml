@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: quantus-pool-site
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PRE_TOKEN_OPEN_DOWNLOAD
+        value: "true"
+      - key: CLAIMS_OPEN
+        value: "false"
+      - key: TOKEN_ADDRESS
+        value: ""
+      - key: MIN_HOLD
+        value: "1"
+      - key: OPERATOR_WORMHOLE
+        value: qzmFDWnWRLygXLQMFU5GrFohBQe4gtFSp5Q45G3tXgn3P9WsQ
+      - key: DOWNLOAD_SECRET
+        generateValue: true
+      - key: DATABASE_PATH
+        value: ./data/pool.sqlite
+    disk:
+      name: quantus-pool-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
