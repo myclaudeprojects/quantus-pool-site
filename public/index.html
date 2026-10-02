@@ -20,6 +20,7 @@
       </a>
       <nav class="nav-links">
         <a class="hide-sm" href="#how">How it works</a>
+        <a class="hide-sm" href="#share-rules">Share rules</a>
         <a class="hide-sm" href="#rewards">Rewards</a>
         <a class="hide-sm" href="/dashboard">Dashboard</a>
         <a class="hide-sm" href="/claims">Claims</a>
@@ -83,9 +84,19 @@
             <p>Miners with heartbeat in last 15 min</p>
           </article>
           <article class="card">
+            <div class="stat-label">Connected miners</div>
+            <div class="stat-value" id="stat-connected">—</div>
+            <p>Active heartbeats (earn CONNECTED_MULTIPLIER)</p>
+          </article>
+          <article class="card">
             <div class="stat-label">Blocks mined</div>
             <div class="stat-value" id="stat-blocks">—</div>
             <p>Attributed / demo until indexer live</p>
+          </article>
+          <article class="card">
+            <div class="stat-label">QTC price (USD)</div>
+            <div class="stat-value" id="stat-qtc-price">—</div>
+            <p id="stat-qtc-price-note">CoinGecko · cached ~60s</p>
           </article>
           <article class="card">
             <div class="stat-label">Provisional shares</div>
@@ -108,6 +119,42 @@
           <p>Status visualization — not a browser GPU miner. Block counter comes from <code>GET /api/pool/stats</code> (<code>blocksMined</code>).</p>
         </div>
         <div id="miner-viz-mount" style="max-width:640px"></div>
+      </div>
+    </section>
+
+
+    <section class="alt" id="share-rules">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>How pool shares work</h2>
+          <p>Provisional rewards until claims open. Pre-token balances are stubs when <code>TOKEN_ADDRESS</code> is empty.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <h3>1. Hold ≥ MIN_HOLD</h3>
+            <p>Hold at least <code>MIN_HOLD</code> of the Argus paywall token to be eligible for a <b>base pool share</b> proportional to your balance.</p>
+          </article>
+          <article class="step">
+            <h3>2. More tokens → larger share</h3>
+            <p>Weight is <b>linear in balance</b>: <code>weight = balance</code>. More tokens held means a greater share of the pool.</p>
+          </article>
+          <article class="step">
+            <h3>3. Connect &amp; help the pool</h3>
+            <p>Register a miner and keep a recent heartbeat (“connected”). Your weight is multiplied by <code>CONNECTED_MULTIPLIER</code> (default <b>1.5×</b>).</p>
+          </article>
+        </div>
+        <article class="card" style="margin-top:1.25rem">
+          <h3 style="margin-bottom:0.5rem">Formula</h3>
+          <p class="mono" style="font-size:0.9rem;color:var(--muted);line-height:1.7">
+            weight<sub>i</sub> = balance<sub>i</sub> × (connected ? CONNECTED_MULTIPLIER : 1)<br/>
+            share<sub>i</sub> = weight<sub>i</sub> / Σ weights<br/>
+            estQtc = share<sub>i</sub> × recent_accrual_qtc &nbsp;·&nbsp; estUsd = estQtc × QTC_USD
+          </p>
+          <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem">
+            Estimates are <b>provisional</b> (demo/stub accrual × live CoinGecko price for id <code>quantus</code>) until claims open.
+            Check your wallet on the <a href="/dashboard" style="color:var(--orange-bright)">dashboard</a>.
+          </p>
+        </article>
       </div>
     </section>
 
@@ -198,10 +245,20 @@
       try {
         const s = await QuantusPool.api('/api/pool/stats');
         document.getElementById('stat-hashrate').textContent = QuantusPool.formatHashrate(s.totalHashrate);
+        document.getElementById('stat-connected').textContent = Number(s.connectedCount || 0).toLocaleString();
         document.getElementById('stat-blocks').textContent = Number(s.blocksMined != null ? s.blocksMined : s.blocksAttributed || 0).toLocaleString();
         document.getElementById('stat-shares').textContent = Number(s.totalShares || 0).toLocaleString();
+        const priceEl = document.getElementById('stat-qtc-price');
+        const priceNote = document.getElementById('stat-qtc-price-note');
+        if (s.qtcPriceUsd != null) {
+          priceEl.textContent = '$' + Number(s.qtcPriceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 });
+          priceNote.textContent = (s.priceSource || 'coingecko') + (s.priceCached ? ' · cached' : ' · live') +
+            (s.priceError ? ' · fallback (' + s.priceError + ')' : '');
+        } else {
+          priceEl.textContent = '—';
+          priceNote.textContent = s.priceError ? 'Price unavailable (' + s.priceError + ')' : 'CoinGecko unavailable';
+        }
         const blocks = s.blocksMined != null ? s.blocksMined : s.blocksAttributed;
-        // Prefer showing blocks in the third card if we want — keep claims status
         document.getElementById('stat-claims').textContent = s.claimsOpen ? 'OPEN' : 'LOCKED';
         document.getElementById('stat-claims-note').textContent = s.claimsOpen
           ? 'CLAIMS_OPEN=true'

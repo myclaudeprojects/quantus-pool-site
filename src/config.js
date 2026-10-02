@@ -31,6 +31,23 @@ const config = {
   claimsOpen: bool(process.env.CLAIMS_OPEN, false),
   corsOrigin: (process.env.CORS_ORIGIN || '').trim(),
   publicDir: path.join(root, 'public'),
+
+  /** Connected-miner weight boost (heartbeat within window). */
+  connectedMultiplier: Number(process.env.CONNECTED_MULTIPLIER || 1.5),
+  connectedWindowMinutes: Number(process.env.CONNECTED_WINDOW_MINUTES || 15),
+
+  /**
+   * Pre-token stub balance for registered miner wallets when TOKEN_ADDRESS empty.
+   * Used only for provisional share demos — not on-chain.
+   */
+  stubTokenBalance: Number(process.env.STUB_TOKEN_BALANCE || 1),
+
+  /** Demo / fallback pool QTC accrual for reward estimates. */
+  demoPoolAccrualQtc: Number(process.env.DEMO_POOL_ACCRUAL_QTC || 10),
+
+  /** CoinGecko coin id for Quantus QTC — https://www.coingecko.com/en/coins/quantus */
+  coingeckoId: (process.env.COINGECKO_ID || 'quantus').trim(),
+  priceCacheSeconds: Number(process.env.PRICE_CACHE_SECONDS || 60),
 };
 
 module.exports = config;

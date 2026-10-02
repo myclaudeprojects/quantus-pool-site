@@ -3,6 +3,8 @@
 const express = require('express');
 const { getDb } = require('../db');
 const config = require('../config');
+const { countConnectedMiners, getRecentAccrualQtc } = require('../services/scoring');
+const { getQtcPriceUsd } = require('../services/price');
 
 const router = express.Router();
 
@@ -35,17 +37,18 @@ function getRecentBlocks(db) {
   }
 }
 
-router.get('/stats', (_req, res) => {
+router.get('/stats', async (_req, res) => {
   const db = getDb();
+  const windowSql = `-${config.connectedWindowMinutes} minutes`;
   const activeCutoff = db
     .prepare(
       `SELECT COALESCE(SUM(last_hashrate), 0) AS total_hashrate,
               COUNT(*) AS active_miners
        FROM miners
        WHERE last_heartbeat_at IS NOT NULL
-         AND datetime(last_heartbeat_at) >= datetime('now', '-15 minutes')`
+         AND datetime(last_heartbeat_at) >= datetime('now', ?)`
     )
-    .get();
+    .get(windowSql);
 
   const totals = db
     .prepare(
@@ -59,28 +62,42 @@ router.get('/stats', (_req, res) => {
   const meta = getMeta(db);
   const blocksMined = Number(meta.blocks_mined || meta.blocks_attributed || 0);
   const recentBlocks = getRecentBlocks(db);
+  const connectedCount = countConnectedMiners(db);
+  const price = await getQtcPriceUsd();
+  const accrualQtc = getRecentAccrualQtc(db);
 
   res.json({
     totalHashrate: activeCutoff.total_hashrate,
     activeMiners: activeCutoff.active_miners,
+    connectedCount,
+    connectedWindowMinutes: config.connectedWindowMinutes,
+    connectedMultiplier: config.connectedMultiplier,
     minerCount: totals.miner_count,
     totalShares: totals.total_shares,
     pendingQtc: totals.pending_qtc,
     blocksMined,
     blocksAttributed: blocksMined,
     poolBalanceQtc: Number(meta.pool_balance_qtc || 0),
+    recentAccrualQtc: accrualQtc,
     recentBlocks,
+    qtcPriceUsd: price.qtcPriceUsd,
+    priceSource: price.source,
+    priceCached: price.cached,
+    priceError: price.error,
+    coingeckoId: config.coingeckoId,
     placeholders: {
       blocksMined: meta.blocks_source !== 'indexer',
       blocksAttributed: meta.blocks_source !== 'indexer',
       poolBalanceQtc: true,
+      recentAccrualQtc: !meta.recent_accrual_qtc,
       note:
-        'Block attribution and on-chain pool balance are placeholders until launch wiring. Seeded demo blocks power the status viz.',
+        'Block attribution and on-chain pool balance are placeholders until launch wiring. Seeded demo blocks power the status viz. Reward estimates use demo/stub accrual until claims.',
     },
     operatorWormhole: config.operatorWormhole,
     claimsOpen: config.claimsOpen,
     tokenConfigured: Boolean(config.tokenAddress),
     preTokenOpenDownload: config.preTokenOpenDownload,
+    minHold: config.minHold,
   });
 });
 

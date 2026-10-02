@@ -11,6 +11,7 @@ const poolRouter = require('./routes/pool');
 const paywallRouter = require('./routes/paywall');
 const downloadRouter = require('./routes/download');
 const claimsRouter = require('./routes/claims');
+const rewardsRouter = require('./routes/rewards');
 
 // Init DB on boot
 getDb();
@@ -41,6 +42,7 @@ app.use('/api/pool', poolRouter);
 app.use('/api/paywall', paywallRouter);
 app.use('/api/download', downloadRouter);
 app.use('/api/claims', claimsRouter);
+app.use('/api/rewards', rewardsRouter);
 
 // Block direct hotlink to releases — must go through signed grant
 app.use('/releases', (_req, res) => {

@@ -84,6 +84,7 @@ function migrate(database) {
   insertMeta.run('blocks_source', 'demo');
   insertMeta.run('pool_balance_qtc', '0');
   insertMeta.run('schema_version', '1');
+  insertMeta.run('recent_accrual_qtc', String(config.demoPoolAccrualQtc));
 
   seedDemoBlocks(database);
 }

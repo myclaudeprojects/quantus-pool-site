@@ -40,6 +40,68 @@
       </aside>
     </div>
 
+
+    <div class="grid-2" style="margin-bottom:1.5rem" id="dash-pool-stats">
+      <article class="card">
+        <div class="stat-label">Connected miners</div>
+        <div class="stat-value" id="dash-connected">—</div>
+        <p id="dash-connected-note">Active heartbeats (last 15m)</p>
+      </article>
+      <article class="card">
+        <div class="stat-label">QTC price</div>
+        <div class="stat-value" id="dash-qtc-price">—</div>
+        <p id="dash-qtc-note">CoinGecko · id quantus</p>
+      </article>
+    </div>
+
+    <section class="card" style="margin-bottom:1.5rem" id="share-rules-dash">
+      <h3>Share rules (provisional)</h3>
+      <ul style="margin:0.75rem 0 0 1.1rem;color:var(--muted)">
+        <li>Hold ≥ <code>MIN_HOLD</code> Argus tokens → eligible for a base share proportional to balance.</li>
+        <li>More tokens held → greater share (linear in balance).</li>
+        <li>Registered miner with recent heartbeat (“connected”) → weight × <code>CONNECTED_MULTIPLIER</code> (default 1.5).</li>
+        <li>Estimated rewards = your share of recent/demo pool accrual × live QTC USD — provisional until claims.</li>
+      </ul>
+    </section>
+
+    <section class="card" style="margin-bottom:1.5rem" id="est-rewards">
+      <h3>Estimated rewards</h3>
+      <p style="margin-bottom:1rem;color:var(--muted)">Look up by wallet or use your saved miner. Honest provisional estimate until claims open.</p>
+      <div class="form-row">
+        <label for="est-address">Wallet address (optional if miner saved)</label>
+        <input id="est-address" type="text" placeholder="qz… or 0x…" autocomplete="off" />
+      </div>
+      <button class="btn btn-primary" type="button" id="btn-estimate">Estimate my share</button>
+      <div id="est-msg"></div>
+      <div class="grid-3" style="margin-top:1rem" id="est-stats">
+        <div>
+          <div class="stat-label">Weight</div>
+          <div class="stat-value" id="est-weight" style="font-size:1.4rem">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Share %</div>
+          <div class="stat-value" id="est-share" style="font-size:1.4rem">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Connected</div>
+          <div class="stat-value" id="est-connected" style="font-size:1.4rem">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Est. QTC</div>
+          <div class="stat-value" id="est-qtc" style="font-size:1.4rem">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Est. USD</div>
+          <div class="stat-value" id="est-usd" style="font-size:1.4rem">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Multiplier</div>
+          <div class="stat-value" id="est-mult" style="font-size:1.4rem">—</div>
+        </div>
+      </div>
+      <p class="cta-note" id="est-meta" style="margin-top:0.75rem">Provisional · uses stub balances pre-token.</p>
+    </section>
+
     <div class="grid-2" style="margin-bottom:1.5rem;align-items:start">
       <section class="card" id="register">
         <h3>Register miner</h3>
@@ -81,6 +143,18 @@
         <div>
           <div class="stat-label">Pending QTC</div>
           <div class="stat-value" id="my-pending">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Est. rewards (QTC)</div>
+          <div class="stat-value" id="my-est-qtc">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Est. rewards (USD)</div>
+          <div class="stat-value" id="my-est-usd">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Connected / share</div>
+          <div class="stat-value" id="my-est-share">—</div>
         </div>
       </div>
       <p class="cta-note" id="my-meta" style="margin-top:0.75rem">No miner saved in this browser yet.</p>
@@ -201,7 +275,89 @@
       location.reload();
     });
 
+    async function loadPoolDash() {
+      try {
+        const s = await QuantusPool.api('/api/pool/stats');
+        document.getElementById('dash-connected').textContent = Number(s.connectedCount || 0).toLocaleString();
+        document.getElementById('dash-connected-note').textContent =
+          'Active heartbeats (last ' + (s.connectedWindowMinutes || 15) + 'm) · multiplier ' + (s.connectedMultiplier || 1.5) + '×';
+        if (s.qtcPriceUsd != null) {
+          document.getElementById('dash-qtc-price').textContent =
+            '$' + Number(s.qtcPriceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 });
+          document.getElementById('dash-qtc-note').textContent =
+            (s.priceSource || 'coingecko') + (s.priceCached ? ' · cached' : ' · live');
+        } else {
+          document.getElementById('dash-qtc-price').textContent = '—';
+          document.getElementById('dash-qtc-note').textContent = s.priceError || 'unavailable';
+        }
+      } catch (e) {
+        document.getElementById('dash-connected-note').textContent = 'Could not load pool stats';
+      }
+    }
+
+    function applyEstimate(data) {
+      document.getElementById('est-weight').textContent = Number(data.weight || 0).toFixed(4);
+      document.getElementById('est-share').textContent = Number(data.sharePct || 0).toFixed(2) + '%';
+      document.getElementById('est-connected').textContent = data.connected ? 'YES' : 'NO';
+      document.getElementById('est-qtc').textContent = Number(data.estQtc || 0).toFixed(4);
+      document.getElementById('est-usd').textContent =
+        data.estUsd != null ? '$' + Number(data.estUsd).toFixed(2) : '—';
+      document.getElementById('est-mult').textContent = Number(data.multiplier || 1).toFixed(2) + '×';
+      document.getElementById('est-meta').textContent =
+        (data.provisional ? 'Provisional · ' : '') +
+        (data.tokenConfigured ? 'token live' : 'pre-token stubs') +
+        ' · minHold=' + data.minHold +
+        (data.balanceStub ? ' · stub balance=' + data.balance : ' · balance=' + data.balance) +
+        (data.priceError ? ' · price: ' + data.priceError : '');
+      const myQ = document.getElementById('my-est-qtc');
+      if (myQ) {
+        myQ.textContent = Number(data.estQtc || 0).toFixed(4);
+        document.getElementById('my-est-usd').textContent =
+          data.estUsd != null ? '$' + Number(data.estUsd).toFixed(2) : '—';
+        document.getElementById('my-est-share').textContent =
+          (data.connected ? '✓ ' : '') + Number(data.sharePct || 0).toFixed(2) + '%';
+      }
+    }
+
+    async function estimateRewards(address, minerId) {
+      const q = new URLSearchParams();
+      if (address) q.set('address', address);
+      if (minerId) q.set('minerId', minerId);
+      return QuantusPool.api('/api/rewards/estimate?' + q.toString());
+    }
+
+    document.getElementById('btn-estimate').addEventListener('click', async () => {
+      const box = document.getElementById('est-msg');
+      const address = document.getElementById('est-address').value.trim();
+      const creds = QuantusPool.loadMiner();
+      try {
+        const data = await estimateRewards(
+          address || null,
+          (!address && creds && creds.minerId) ? creds.minerId : null
+        );
+        msg(box, 'Estimate updated (provisional until claims).', 'ok');
+        applyEstimate(data);
+      } catch (e) {
+        msg(box, e.message || 'Estimate failed', 'err');
+      }
+    });
+
+    const _loadMineInner = loadMine;
+    loadMine = async function () {
+      await _loadMineInner();
+      const creds = QuantusPool.loadMiner();
+      if (!creds || !creds.minerId) return;
+      try {
+        const data = await estimateRewards(creds.walletAddress || null, creds.minerId);
+        applyEstimate(data);
+        if (creds.walletAddress) {
+          document.getElementById('est-address').value = creds.walletAddress;
+        }
+      } catch (_) { /* ignore */ }
+    };
+
     QuantusMinerViz.mount(document.getElementById('miner-viz-mount'), { compact: true });
+    loadPoolDash();
     loadMine();
   </script>
 </body>
