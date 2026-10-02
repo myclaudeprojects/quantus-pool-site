@@ -38,7 +38,7 @@
         <h1>Mine <span>QTC</span> on Arc. Track shares. Claim after launch.</h1>
         <p class="lede">
           <b>Quantus Pool on Arc</b> — Arc / Argus pool product, <b>not</b> L1 Quantus coin.
-          Buy Arc QTC and <b>keep mining</b> to claim a convex share of this pool’s mined L1 Quantus
+          Buy Arc QTC and <b>keep mining</b> to claim an aggressive per-million share of this pool’s mined L1 Quantus
           when claims open. Download is free (no paywall); holders who don’t mine get <b>0%</b>.
           Panel shows <b>live Quantus mainnet blocks</b>.
         </p>
@@ -144,15 +144,16 @@
             <p>Keep a fresh heartbeat (“connected”). Holders who don’t mine get <b>0%</b> of the mined pot. Connected is the gate.</p>
           </article>
           <article class="step">
-            <h3>3. Convex weight</h3>
-            <p>While mining: <code>weight = holdings<sup>1.5</sup></code>. Bigger bags get more than linear advantage. Shares sum to 100% of the <b>pool mining pot</b>.</p>
+            <h3>3. Per-million weight</h3>
+            <p>While mining: each complete million of Arc steps up — 1st ×1, 2nd ×2<sup>1.5</sup>≈2.83, 3rd ×3<sup>1.5</sup>≈5.2, …. Shares sum to 100% of the <b>pool mining pot</b>.</p>
           </article>
         </div>
         <article class="card" style="margin-top:1.25rem">
           <h3 style="margin-bottom:0.5rem">Locked formula</h3>
           <p class="mono" style="font-size:0.9rem;color:var(--muted);line-height:1.85">
             if not mining (no recent heartbeat) → weight<sub>i</sub> = 0<br/>
-            if mining → weight<sub>i</sub> = Arc_QTC_holdings<sub>i</sub><sup>1.5</sup><br/>
+            if mining → n = floor(H / 1_000_000), rem = H % 1_000_000<br/>
+            &nbsp;&nbsp;weight<sub>i</sub> = Σ<sub>k=1..n</sub> (1_000_000 · k<sup>1.5</sup>) + rem · (n+1)<sup>1.5</sup><br/>
             pool_share<sub>i</sub> = weight<sub>i</sub> / Σ&nbsp;weight<sub>j</sub><br/>
             claim<sub>i</sub> = pool_share<sub>i</sub> × mined_L1_QTC_in_pool
           </p>
@@ -169,7 +170,7 @@
       <div class="wrap">
         <div class="section-head">
           <h2>Pool % at a glance</h2>
-          <p>Arc bag size ≠ automatic claim. Mining gate + convex curve decide your cut of the <b>pool mining pot</b>.</p>
+          <p>Arc bag size ≠ automatic claim. Mining gate + per-million acceleration decide your cut of the <b>pool mining pot</b>.</p>
         </div>
         <div class="grid-2">
           <article class="card">
@@ -185,11 +186,13 @@
           <article class="card">
             <h3 style="margin-bottom:0.5rem">2. Share of pool mining pot</h3>
             <p style="color:var(--muted);font-size:0.95rem;line-height:1.65" id="share-example-copy">
-              <b>Honest examples (hold 10% of Arc 1B):</b><br/>
-              • Mine + others mine → convex ^1.5 ≈ <b id="ex-convex">—</b>% of pot (linear would be 10%).<br/>
+              <b>While mining (aggressive per million):</b><br/>
+              • <b>1M</b> Arc → weight <b id="ex-w1">—</b> (×1.00 eff)<br/>
+              • <b>2M</b> Arc → weight <b id="ex-w2">—</b> (≈3.83× a 1M bag)<br/>
+              • <b>5M</b> Arc → weight <b id="ex-w5">—</b> (≈28.2× a 1M bag)<br/>
               • Hold but <b>don’t mine</b> → <b>0%</b> of pot.<br/>
               • Only you mining → <b>100%</b> of pot (idle bags don’t enter Σ).<br/><br/>
-              Y-axis on the graph = <b>% of pool mining pot</b>, not % of 21M.
+              Graph Y = <b>weight</b> (pool_share ∝ weight); claim % of <b>pool mining pot</b>, not 21M.
             </p>
           </article>
         </div>
@@ -197,7 +200,7 @@
         <article class="card" style="margin-top:1.25rem" id="share-curve-card">
           <h3 style="margin-bottom:0.35rem">Share curve graph</h3>
           <p style="color:var(--muted);font-size:0.92rem;margin-bottom:0.5rem">
-            X = % of Arc 1B held while mining · Y = % of pool mining pot · Orange = holdings<sup>1.5</sup> · Dashed = linear (rejected)
+            X = Arc millions held while mining · Y = weight · Orange = per-million aggressive (steps accelerate) · Dashed = linear (rejected)
           </p>
           <div id="share-curve-mount">Loading curve…</div>
         </article>
@@ -361,10 +364,8 @@
           if (line) {
             const supply = Number(le.totalSupply || 1e9).toLocaleString();
             const buy = Number(le.houseBuyTokens || 5e6).toLocaleString();
-            const mult = Number(s.connectedMultiplier || 1.5);
             line.textContent =
-              'Bag: ' + buy + ' / ' + supply + ' supply · pool share = holdings × ' +
-              mult + '× if connected ÷ Σ weights · % of mined L1 QTC pot';
+              'Bag: ' + buy + ' / ' + supply + ' supply · pool share = per-million weight / Σ · % of mined L1 QTC pot (must mine)';
           }
         } catch (e) {
           document.getElementById('stat-claims-note').textContent = 'Could not load pool stats';
@@ -376,10 +377,14 @@
         try {
           const f = await QuantusPool.api('/api/rewards/formula');
           const ex = f.example || {};
-          const a = ex.caseA_youAndOthersMining && ex.caseA_youAndOthersMining.convex;
-          if (a && document.getElementById('ex-convex')) {
-            document.getElementById('ex-convex').textContent = Number(a.poolSharePct).toFixed(2);
+          const wm = ex.whileMining || {};
+          function fmtW(bag) {
+            if (!bag) return '—';
+            return Number(bag.weight).toLocaleString(undefined, { maximumFractionDigits: 0 });
           }
+          if (document.getElementById('ex-w1')) document.getElementById('ex-w1').textContent = fmtW(wm['1M']);
+          if (document.getElementById('ex-w2')) document.getElementById('ex-w2').textContent = fmtW(wm['2M']);
+          if (document.getElementById('ex-w5')) document.getElementById('ex-w5').textContent = fmtW(wm['5M']);
           const le = (await QuantusPool.api('/api/pool/stats')).launchEconomics || {};
           const line = document.getElementById('launch-econ-line');
           if (line && le.totalSupply) {

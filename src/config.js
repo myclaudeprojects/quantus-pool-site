@@ -58,7 +58,7 @@ const config = {
   /**
    * Mining gate: no recent heartbeat → weight = 0 (holders who don't mine get 0% of pot).
    * Connected multiplier is redundant when mining is the gate (all eligible share the same ×);
-   * kept for env/API compat but scoring uses it only as a boolean gate (weight 0 or holdings^power).
+   * kept for env/API compat but scoring uses it only as a boolean gate (weight 0 or per-million aggressive).
    */
   connectedMultiplier: Number(process.env.CONNECTED_MULTIPLIER || 1.5),
   connectedWindowMinutes: Number(process.env.CONNECTED_WINDOW_MINUTES || 15),
@@ -123,13 +123,16 @@ const config = {
     (process.env.LAUNCH_HOUSE_WALLET || '0x341BB8851Ff8fD9EAE20ea083c2F779e646B8488').trim(),
 
   /**
-   * LOCKED share curve (convex + mining gate):
+   * LOCKED share curve (aggressive per-million + mining gate):
    *   if not connected (no recent heartbeat) → weight = 0
-   *   if connected → weight = holdings ^ SHARE_CURVE_POWER  (default 1.5)
+   *   if connected →
+   *     n = floor(H / 1e6); rem = H % 1e6
+   *     weight = Σ_{k=1..n}(1e6 · k^p) + rem · (n+1)^p
+   *     p = SHARE_CURVE_POWER (default 1.5)
    * Extra ×1.5 connected boost dropped as redundant (gate already requires mining).
    * Download stays open (no paywall); mining required for pool eligibility.
    */
-  shareCurve: (process.env.SHARE_CURVE || 'power').trim().toLowerCase(),
+  shareCurve: (process.env.SHARE_CURVE || 'per_million_aggressive').trim().toLowerCase(),
   shareCurvePower: Number(process.env.SHARE_CURVE_POWER || 1.5),
   shareCurveLocked: true,
 };

@@ -45,7 +45,7 @@ npm run dev
 
 **Real miners:** `POST /api/miners/register` then `POST /api/miners/heartbeat` with `{ minerId, hashrate, shares }` + `X-Api-Key`. Their hashrate **sums with** the seed while heartbeats stay fresh. Set `SEED_OPERATOR_MINER=false` once you only want live rigs.
 
-**Connected share boost:** wallets with a fresh heartbeat get `CONNECTED_MULTIPLIER` (default 1.5×) on pool share weight.
+**Mining gate:** wallets without a fresh heartbeat get weight = 0 (holders who don’t mine get 0% of the pot). Legacy `CONNECTED_MULTIPLIER` is not applied as a boost.
 
 ## Pool share economics (pool mining pot)
 
@@ -53,32 +53,40 @@ npm run dev
 
 **Pool % = your cut of mined L1 Quantus currently in the pool** — not % of Arc token supply, not % of the 21M L1 chain max (context only), not a fee split.
 
-### Locked formula
+### Locked formula (aggressive per million)
 
 ```
 if not connected (no recent heartbeat) → weight_i = 0
-if connected → weight_i = Arc_QTC_holdings_i ^ 1.5
+if connected:
+  n   = floor(H / 1_000_000)          // complete millions of Arc QTC
+  rem = H % 1_000_000
+  weight_i = Σ_{k=1..n} (1_000_000 · k^1.5) + rem · (n+1)^1.5
+  // 1st million ×1, 2nd ×2^1.5≈2.83, 3rd ×3^1.5≈5.2, …
 pool_share_i = weight_i / Σ weight_j
 claim_i = pool_share_i × mined_L1_QTC_in_pool
 ```
 
-- Convex `^1.5` advantages larger bags more than linear.
+- Per-million steps accelerate: each complete million raises the marginal multiplier to `k^1.5`.
 - Extra ×1.5 connected boost **dropped** (redundant once mining is the gate).
 - Holders who don’t mine get **0%** of the mining pot.
 - Arc launch **1B** · L1 Quantus max **21M** ever (chain-max context only).
 - Arc QTC ≠ L1 Quantus coin.
 
-### Example (hold 10% of Arc 1B)
+### Example (while mining)
 
-| Case | Pool share |
-| --- | --- |
-| You mine + others mine | convex ^1.5 ≈ **3.57%** of pot (linear would be 10%) |
-| Hold 10% but **don’t mine** | **0%** |
-| Only you mining | **100%** of pot |
+| Bag | Weight | Eff. vs linear | vs 1M weight |
+| --- | --- | --- | --- |
+| **1M** Arc | **1,000,000** | ×1.00 | 1.00× |
+| **2M** Arc | **≈3,828,427** | ×1.91 | ≈3.83× |
+| **5M** Arc | **≈28,204,919** | ×5.64 | ≈28.2× |
+| Hold any amount but **don’t mine** | **0** | — | **0%** of pot |
+| Only you mining | — | — | **100%** of pot |
+
+If 1M + 2M + 5M holders all mine (only those three): ≈ **3.03% / 11.59% / 85.38%** of pot (linear would be 12.5 / 25 / 62.5).
 
 ### Graph
 
-Home page SVG: X = % of Arc 1B held while mining · Y = % of pool mining pot · orange = ^1.5 · dashed = linear (rejected).
+Home page SVG: X = Arc millions held while mining · Y = weight · orange = per-million aggressive (step labels ×k^1.5) · dashed = linear (rejected) · dots at 1M / 2M / 5M.
 
 API: `GET /api/rewards/formula`, `GET /api/rewards/curve`.
 
@@ -103,7 +111,8 @@ API: `GET /api/rewards/formula`, `GET /api/rewards/curve`.
 | `PRE_TOKEN_OPEN_DOWNLOAD` | `true` | **Deprecated** — download is always open |
 | `CLAIMS_OPEN` | `false` | Unlock `POST /api/claims/request` |
 | `CONNECTED_MULTIPLIER` | `1.5` | Legacy; boost not applied (mining is the gate) |
-| `SHARE_CURVE_POWER` | `1.5` | Convex holdings exponent |
+| `SHARE_CURVE` | `per_million_aggressive` | Locked curve id |
+| `SHARE_CURVE_POWER` | `1.5` | Per-million marginal exponent (k^p) |
 | `LAUNCH_TOTAL_SUPPLY` | `1000000000` | Arc launch supply (display) |
 | `L1_MAX_SUPPLY_QTC` | `21000000` | L1 chain-max context only |
 | `CONNECTED_WINDOW_MINUTES` | `15` | Heartbeat freshness for “connected” |
@@ -192,7 +201,7 @@ Blueprint: `render.yaml` (web service, Node **20.19.2** via `NODE_VERSION` / `.n
 - **Stack:** Express + vanilla HTML/CSS/JS + `better-sqlite3` (no React) for speed.
 - **Node:** `engines.node = 20.x` + Render `NODE_VERSION=20.19.2`.
 - **Open download:** no token gate. `TOKEN_ADDRESS` / `ethers` used only for share weights; empty CA → stub balances for registered miners.
-- **Scoring:** linear balance weight × optional connected multiplier; CoinGecko id **`quantus`**.
+- **Scoring:** aggressive per-million Arc weight while mining (else 0); CoinGecko id **`quantus`**.
 - **Download:** short-lived one-shot tokens in SQLite; zip never publicly listable under `/releases`.
 - **Blocks:** `chainHeight` / `blocksMined` from live mainnet GraphQL when available; `blocksSource=mainnet|provisional`; placeholders only when provisional.
 - Evolved from `/workspace/quantus-mining-landing/` brand (orange `#ff6a00` on `#0a0a0b`) and disclosure copy.

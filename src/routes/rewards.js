@@ -14,7 +14,7 @@ const router = express.Router();
 
 /**
  * GET /api/rewards/formula
- * Locked convex curve + illustrative example + graph series.
+ * Locked per-million aggressive curve + illustrative example + graph series.
  */
 router.get('/formula', (_req, res) => {
   res.json({
@@ -35,10 +35,12 @@ router.get('/formula', (_req, res) => {
 router.get('/curve', (req, res) => {
   const youConnected = String(req.query.youConnected || '1') !== '0';
   const othersConnected = String(req.query.othersConnected || '0') === '1';
+  const maxMillions = Number(req.query.maxMillions) > 0 ? Number(req.query.maxMillions) : 10;
   res.json(
     curveSeries({
       youConnected,
       othersConnected,
+      maxMillions,
     })
   );
 });

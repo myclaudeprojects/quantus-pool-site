@@ -25,7 +25,7 @@ services:
       - key: CONNECTED_MULTIPLIER
         value: "1.5"
       - key: SHARE_CURVE
-        value: power
+        value: per_million_aggressive
       - key: SHARE_CURVE_POWER
         value: "1.5"
       - key: LAUNCH_TOTAL_SUPPLY
