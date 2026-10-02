@@ -1,97 +1,77 @@
 'use strict';
 
-const path = require('path');
-const express = require('express');
-const cors = require('cors');
-const config = require('./config');
-const { getDb } = require('./db');
+/**
+ * Quantus Pool on Arc — SHUT DOWN.
+ * Site written off; no mining, no buy CTA, no token address, no claims.
+ */
+const http = require('http');
 
-const minersRouter = require('./routes/miners');
-const poolRouter = require('./routes/pool');
-const paywallRouter = require('./routes/paywall');
-const downloadRouter = require('./routes/download');
-const claimsRouter = require('./routes/claims');
-const rewardsRouter = require('./routes/rewards');
-const { startChainPoller } = require('./services/chain');
-const { startOperatorSeedKeepalive } = require('./services/operatorSeed');
+const PORT = Number(process.env.PORT) || 10000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-// Init DB on boot
-getDb();
-startChainPoller();
-startOperatorSeedKeepalive(getDb);
+const OFFLINE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Quantus Pool on Arc — Offline</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0b0f14; color: #e8eef6;
+    }
+    main {
+      max-width: 36rem; padding: 2rem; text-align: center;
+      border: 1px solid #243041; border-radius: 12px; background: #121821;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 0.75rem; }
+    p { margin: 0.5rem 0; line-height: 1.5; color: #a9b4c4; }
+    .badge {
+      display: inline-block; margin-bottom: 1rem; padding: 0.25rem 0.6rem;
+      border-radius: 999px; background: #3a1d1d; color: #ffb4b4;
+      font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="badge">Site shutdown</div>
+    <h1>Quantus Pool on Arc is offline</h1>
+    <p>This mining site has been shut down and written off. There is no active pool, no buy CTA, and no token contract linked here.</p>
+    <p>Do not mint or buy Arc QTC for this project.</p>
+  </main>
+</body>
+</html>`;
 
-const app = express();
+const server = http.createServer((req, res) => {
+  const url = (req.url || '/').split('?')[0];
 
-app.disable('x-powered-by');
-app.use(
-  cors({
-    origin: config.corsOrigin || true,
-  })
-);
-app.use(express.json({ limit: '256kb' }));
+  if (url === '/api/health') {
+    res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({
+      ok: false,
+      service: 'quantus-pool-site',
+      status: 'offline',
+      message: 'Site shut down — written off as a loss',
+      tokenConfigured: false,
+      tokenAddress: null,
+      buyUrl: null,
+      claimsOpen: false,
+    }));
+    return;
+  }
 
-app.get('/api/health', (_req, res) => {
-  res.json({
-    ok: true,
-    service: 'quantus-pool-site',
-    siteName: config.siteName,
-    claimsOpen: config.claimsOpen,
-    tokenConfigured: Boolean(config.tokenAddress),
-    tokenAddress: config.tokenAddress || null,
-    buyUrl: config.argusTokenUrl || null,
-    argusTokenUrl: config.argusTokenUrl || null,
-    openDownload: true,
-    preTokenOpenDownload: true,
-    tokenAffects: 'pool_share_only',
-    operatorWormhole: config.operatorWormhole,
+  // Kill all former public APIs / downloads / pages
+  res.writeHead(410, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store',
   });
+  res.end(OFFLINE_HTML);
 });
 
-app.use('/api/miners', minersRouter);
-app.use('/api/pool', poolRouter);
-app.use('/api/paywall', paywallRouter);
-app.use('/api/download', downloadRouter);
-app.use('/api/claims', claimsRouter);
-app.use('/api/rewards', rewardsRouter);
-
-// Block direct hotlink to releases — must go through signed grant
-app.use('/releases', (_req, res) => {
-  res.status(403).json({
-    error: 'direct_download_forbidden',
-    message: 'Use GET /api/download/url for a signed one-shot link. Download is open — no token gate.',
-  });
-});
-
-app.use(express.static(config.publicDir, { index: false, extensions: ['html'] }));
-
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(config.publicDir, 'index.html'));
-});
-
-app.get('/dashboard', (_req, res) => {
-  res.sendFile(path.join(config.publicDir, 'dashboard.html'));
-});
-
-app.get('/download', (_req, res) => {
-  res.sendFile(path.join(config.publicDir, 'download.html'));
-});
-
-app.get('/claims', (_req, res) => {
-  res.sendFile(path.join(config.publicDir, 'claims.html'));
-});
-
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ error: 'internal_error' });
-});
-
-app.listen(config.port, config.host, () => {
-  console.log(`${config.siteName} listening on http://${config.host}:${config.port}`);
-  console.log(`  CLAIMS_OPEN=${config.claimsOpen}`);
-  console.log(`  OPEN_DOWNLOAD=true (token holdings → pool share % only)`);
-  console.log(`  TOKEN_ADDRESS=${config.tokenAddress || '(empty — pre-launch)'}`);
-  console.log(`  BUY_URL=${config.argusTokenUrl || '(hidden until TOKEN_ADDRESS / ARGUS_TOKEN_URL)'}`);
-  console.log(`  SEED_OPERATOR_MINER=${config.seedOperatorMiner} OPERATOR_HASHRATE_HS=${config.operatorHashrateHs} METRICS=${config.operatorMetricsUrl || '(none)'}`);
-  console.log(`  OPERATOR_WORMHOLE=${config.operatorWormhole}`);
-  console.log(`  DB=${config.databasePath}`);
+server.listen(PORT, HOST, () => {
+  console.log(`quantus-pool-site OFFLINE on http://${HOST}:${PORT}`);
 });
